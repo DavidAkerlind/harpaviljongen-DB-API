@@ -61,6 +61,6 @@ MenuSectionSchema.set('toJSON', {
 	},
 });
 
-const MenuSection = mongoose.model('MenuSection', MenuSectionSchema);
+const Menu = mongoose.model('Menu', MenuSectionSchema);
 
-export default MenuSection;
+export default Menu;

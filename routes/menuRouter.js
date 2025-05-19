@@ -9,3 +9,5 @@ router.get('/', async (req, res) => {
 
 	res.json(constructResObj(200, 'Success!', true, result));
 });
+
+export default router;
