@@ -1,0 +1,29 @@
+{
+	"name": "harpaviljongen-db-api",
+	"version": "1.0.0",
+	"description": "harpaviljongen with MongoDB integration",
+	"homepage": "https://github.com/DavidAkerlind/harpaviljongen-DB-API#readme",
+	"bugs": {
+		"url": "https://github.com/DavidAkerlind/harpaviljongen-DB-API/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/DavidAkerlind/harpaviljongen-DB-API.git"
+	},
+	"license": "ISC",
+	"author": "David Akerlind",
+	"type": "module",
+	"main": "server.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node server.js",
+		"dev": "nodemon server.js"
+	},
+	"dependencies": {
+		"cors": "^2.8.5",
+		"dotenv": "^16.5.0",
+		"express": "^5.1.0",
+		"mongoose": "^8.15.0",
+		"nodemon": "^3.1.10"
+	}
+}
