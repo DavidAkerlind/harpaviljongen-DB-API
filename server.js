@@ -13,7 +13,7 @@ const database = mongoose.connection;
 const allowedOrigins = [
 	'https://www.davidakerlind.com', // Production URL
 	'http://localhost:7000',
-	'http://localhost:5173/', // Local dev URL
+	'http://localhost:5173', // Local dev URL
 ];
 
 // Middlewares
