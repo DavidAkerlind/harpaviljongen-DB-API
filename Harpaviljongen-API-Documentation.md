@@ -3,7 +3,7 @@
 ## Base URL
 
 ```
-http://localhost:7000/api/menus
+https://harpaviljongen-db-api.onrender.com/api/menus
 ```
 
 ## Endpoints
