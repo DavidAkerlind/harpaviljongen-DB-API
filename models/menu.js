@@ -6,7 +6,7 @@ const Schema = mongoose.Schema;
 // Schema för individuella rätter/viner/snacks m.m.
 const MenuItemSchema = new Schema(
 	{
-		id: { type: Number },
+		id: { type: String },
 		active: { type: Boolean, default: true },
 		title: { type: String, required: true },
 		producer: { type: String }, // endast för vin

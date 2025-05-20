@@ -1,9 +1,10 @@
 import { constructResObj } from '../utils/constructResObj.js';
 import Menu from '../models/menu.js';
+import { v4 as uuidv4 } from 'uuid';
 
-// =====================================================
-// =============  GET REQUEST FUNCTIONS   ==============
-// =====================================================
+// ===================================================================
+// ============= ↆↆↆↆↆ GET REQUEST FUNCTIONS ↆↆↆↆↆ  ==============
+// ===================================================================
 
 export async function getAllMenus(req, res) {
 	try {
@@ -63,14 +64,123 @@ export async function filterById(req, res) {
 		);
 	}
 }
+export async function getItemsInMenu(req, res) {
+	const { menuId } = req.params;
 
-// =====================================================
-// =============  POST REQUEST FUNCTIONS   ==============
-// =====================================================
+	try {
+		const menu = await Menu.findOne({ id: menuId });
+
+		if (!menu) {
+			return res
+				.status(404)
+				.json(
+					constructResObj(
+						404,
+						`No menu found with id:${menuId}`,
+						false
+					)
+				);
+		}
+
+		res.json(
+			constructResObj(
+				200,
+				`Items in menu:${menuId} retrieved successfully`,
+				true,
+				menu.items
+			)
+		);
+	} catch (error) {
+		res.status(500).json(
+			constructResObj(500, 'Server error', false, error.message)
+		);
+	}
+}
+
+export async function searchMenuItems(req, res) {
+	const { query } = req.query;
+
+	try {
+		if (!query) {
+			return res
+				.status(400)
+				.json(constructResObj(400, 'Search query is required', false));
+		}
+
+		// Get all menus
+		const menus = await Menu.find();
+
+		// Search through all items in all menus
+		const searchResults = [];
+
+		menus.forEach((menu) => {
+			const matchingItems = menu.items.filter(
+				(item) =>
+					(item.title &&
+						item.title
+							.toLowerCase()
+							.includes(query.toLowerCase())) ||
+					(item.description &&
+						item.description
+							.toLowerCase()
+							.includes(query.toLowerCase()))
+			);
+
+			if (matchingItems.length > 0) {
+				searchResults.push({
+					menuId: menu.id,
+					menuTitle: menu.title,
+					items: matchingItems,
+				});
+			}
+		});
+
+		if (searchResults.length === 0) {
+			return res
+				.status(404)
+				.json(
+					constructResObj(
+						404,
+						`No items found matching: "${query}"`,
+						false
+					)
+				);
+		}
+
+		res.json(
+			constructResObj(
+				200,
+				`Found ${searchResults.reduce(
+					(sum, menu) => sum + menu.items.length,
+					0
+				)} items matching: "${query}"`,
+				true,
+				searchResults
+			)
+		);
+	} catch (error) {
+		res.status(500).json(
+			constructResObj(500, 'Server error', false, error.message)
+		);
+	}
+}
+
+// ===================================================================
+// ============= ↆↆↆↆↆ  POST REQUEST FUNCTIONS  ↆↆↆↆↆ ==============
+// ===================================================================
 
 export async function postMenu(req, res) {
 	try {
-		const newMenu = await Menu.insertOne(req.body);
+		const menuData = req.body;
+
+		if (menuData.items && Array.isArray(menuData.items)) {
+			menuData.items = menuData.items.map((item) => ({
+				...item,
+				id: uuidv4().slice(0, 8),
+			}));
+		}
+
+		const newMenu = await Menu.create(menuData);
 
 		res.status(201).json(
 			constructResObj(201, 'Menu created successfully', true, newMenu)
@@ -102,8 +212,19 @@ export async function postBulk(req, res) {
 				);
 		}
 
-		await Menu.deleteMany({});
-		const result = await Menu.insertMany(menusArray);
+		// Transform the data to add UUIDs for all items in all menus
+		const transformedMenus = menusArray.map((menu) => {
+			if (menu.items && Array.isArray(menu.items)) {
+				menu.items = menu.items.map((item) => ({
+					...item,
+					id: uuidv4().slice(0, 8),
+					active: item.active ?? true,
+				}));
+			}
+			return menu;
+		});
+
+		const result = await Menu.insertMany(transformedMenus);
 
 		res.status(201).json(
 			constructResObj(201, 'Menus inserted successfully', true, result)
@@ -142,13 +263,10 @@ export async function addMenuItem(req, res) {
 				);
 		}
 
-		const nextId =
-			menu.items.length > 0
-				? Math.max(...menu.items.map((item) => item.id)) + 1
-				: 1;
+		const itemId = uuidv4().slice(0, 8);
 
 		newItem = {
-			id: nextId,
+			id: itemId,
 			active: newItem.active ?? true,
 			title: newItem.title || '',
 			description: newItem.description || '',
@@ -242,9 +360,79 @@ export async function updateMenu(req, res) {
 		);
 	}
 }
-// =====================================================
-// =============  PATCH REQUEST FUNCTIONS   ==============
-// =====================================================
+
+export async function updateMenuItem(req, res) {
+	const { menuId, itemId, field } = req.params;
+	const { value } = req.body;
+
+	try {
+		// Check if field is allowed to be updated
+		const allowedFields = ['title', 'description', 'price'];
+		if (!allowedFields.includes(field)) {
+			return res
+				.status(400)
+				.json(
+					constructResObj(
+						400,
+						`Cannot update field:${field}. Allowed fields are: ${allowedFields.join(
+							', '
+						)}`,
+						false
+					)
+				);
+		}
+
+		const menu = await Menu.findOne({ id: menuId });
+		if (!menu) {
+			return res
+				.status(404)
+				.json(
+					constructResObj(
+						404,
+						`No menu found with id:${menuId}`,
+						false
+					)
+				);
+		}
+
+		// Find the item to update
+		const item = menu.items.find((item) => item.id === itemId);
+		if (!item) {
+			return res
+				.status(404)
+				.json(
+					constructResObj(
+						404,
+						`No item found with id:${itemId} in menu:${menuId}`,
+						false
+					)
+				);
+		}
+
+		// Update the field
+		item[field] = value;
+
+		// Save the updated menu
+		await menu.save();
+
+		res.json(
+			constructResObj(
+				200,
+				`Item ${itemId} ${field} updated successfully in menu:${menuId}`,
+				true,
+				item
+			)
+		);
+	} catch (error) {
+		res.status(500).json(
+			constructResObj(500, 'Server error', false, error.message)
+		);
+	}
+}
+
+// ===================================================================
+// ============= ↆↆↆↆↆ PATCH REQUEST FUNCTIONS ↆↆↆↆↆ  ==============
+// ===================================================================
 export async function toggleMenuItem(req, res) {
 	const { menuId, itemId } = req.params;
 
@@ -264,7 +452,7 @@ export async function toggleMenuItem(req, res) {
 		}
 
 		// Find the item to toggle
-		const item = menu.items.find((item) => item.id === Number(itemId));
+		const item = menu.items.find((item) => item.id === itemId);
 
 		if (!item) {
 			return res
@@ -298,9 +486,9 @@ export async function toggleMenuItem(req, res) {
 		);
 	}
 }
-// =====================================================
-// =============  DELETE REQUEST FUNCTIONS   ==============
-// =====================================================
+// ===================================================================
+// ============= ↆↆↆↆↆ DELETE REQUEST FUNCTIONS ↆↆↆↆↆ ==============
+// ===================================================================
 export async function deleteMenuItem(req, res) {
 	const { menuId, itemId } = req.params;
 
@@ -320,9 +508,7 @@ export async function deleteMenuItem(req, res) {
 		}
 
 		// Find the index of the item to remove
-		const itemIndex = menu.items.findIndex(
-			(item) => item.id === Number(itemId)
-		);
+		const itemIndex = menu.items.findIndex((item) => item.id === itemId);
 
 		if (itemIndex === -1) {
 			return res
@@ -378,9 +564,33 @@ export async function deleteMenu(req, res) {
 		res.json(
 			constructResObj(
 				200,
-				`Menu with id:${menuId} deleted successful`,
+				`Menu with id:${menuId} deleted successfully`,
 				true,
 				result
+			)
+		);
+	} catch (error) {
+		res.status(500).json(
+			constructResObj(500, 'Server error', false, error.message)
+		);
+	}
+}
+
+export async function deleteAllMenus(req, res) {
+	try {
+		const result = await Menu.deleteMany({});
+
+		if (result.deletedCount === 0) {
+			return res
+				.status(404)
+				.json(constructResObj(404, 'No menus found to delete', false));
+		}
+
+		res.json(
+			constructResObj(
+				200,
+				`Successfully deleted ${result.deletedCount}(all) menus`,
+				true
 			)
 		);
 	} catch (error) {
