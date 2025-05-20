@@ -1,16 +1,17 @@
 import mongoose from 'mongoose';
+import { formatSwedishTime } from '../utils/formatSwedishTime.js';
 
 const Schema = mongoose.Schema;
 
 // Schema för individuella rätter/viner/snacks m.m.
 const MenuItemSchema = new Schema(
 	{
-		id: { type: Number, required: true },
+		id: { type: Number },
 		active: { type: Boolean, default: true },
 		title: { type: String, required: true },
 		producer: { type: String }, // endast för vin
 		description: { type: String },
-		price: { type: Number },
+		price: { type: Schema.Types.Mixed },
 	},
 	{ timestamps: true }
 );
@@ -27,15 +28,6 @@ const MenuSectionSchema = new Schema(
 	},
 	{ timestamps: true }
 );
-
-function formatSwedishTime(date) {
-	const swedishOffset = 60 * 60 * 1000; // +1 timme för vintertid
-	const isSummerTime = new Date().getTimezoneOffset() === -120; // +2 timme på sommaren
-	const offset = swedishOffset + (isSummerTime ? 60 * 60 * 1000 : 0);
-
-	const localDate = new Date(date.getTime() + offset);
-	return localDate.toISOString().split('.')[0];
-}
 
 // Anpassad JSON-konvertering för att formatera timestamps
 MenuItemSchema.set('toJSON', {

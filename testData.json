@@ -1,0 +1,314 @@
+[
+	{
+		"id": "menu-always",
+		"title": "ALLTID PÅ MENYN",
+		"description": "",
+		"type": "all",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Toast Skagen",
+				"description": "Handskalade räkor, smörstekt levain från Två systrars bageri",
+				"price": 235
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Oxtartar",
+				"description": "Pepparrotskräm, jordärtskocka & pommes",
+				"price": 235
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Burrata sallad",
+				"description": "Burrata, kronärtskocka, tomater, variation av grönt",
+				"price": 225
+			}
+		]
+	},
+	{
+		"id": "menu-wine",
+		"title": "VECKANS VINER",
+		"description": "",
+		"type": "wine",
+		"price": 165,
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Rioja Blanco Las Laventadas",
+				"producer": "Javier San Pedro",
+				"description": "Friskt vin med smak av stenfrukter och florala inslag. Perfekt till charkbrickan eller vår magiska Toast Skagen.",
+				"price": ""
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Lux Fortis Cabernet Sauvignon",
+				"producer": "Famille Fabre",
+				"description": "Smak av mörk frukt och kryddiga toner med silkeslena tanniner. Paras gärna med helgens hedersgäst: Steak Minute.",
+				"price": ""
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Claret A La Fraîche",
+				"producer": "Pauline Lapierre",
+				"description": "Josigt och fräscht med smak av röda frukter och bär. Perfekt att drickas sval i solen och funkar utmärkt med vår Oxtartar.",
+				"price": ""
+			}
+		]
+	},
+	{
+		"id": "menu-lunch",
+		"title": "VECKANS LUNCH",
+		"description": "Serveras tisdag till söndag mellan 11:00 och 15:00",
+		"type": "lunch",
+		"price": "",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Klassiska köttbullar",
+				"description": "Pessgurka, rårörda lingon, gräddsås & potatispuré",
+				"price": 165
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Räksallad",
+				"description": "Handskalade räkor, ägg, gröna blad, krutonger, rädisor, tomat & citronmajonäs",
+				"price": 165
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Reuben sandwich",
+				"description": "Levainbröd, pastrami, lagrad ost, surkål, reubensås & pickles",
+				"price": 165
+			}
+		]
+	},
+	{
+		"id": "menu-sweets",
+		"title": "DET SÖTA",
+		"description": "",
+		"type": "sweets",
+		"price": "",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Varm bulle med glass",
+				"description": "Ert val av av kanel eller vaniljbulle gräddas i ugn och toppas med en kula vaniljglass",
+				"price": 80
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Blåbärsruta",
+				"description": "Blåbärspudding & citronsmetana",
+				"price": 40
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Sorbet toppat med bubblor",
+				"description": "",
+				"price": 90
+			},
+			{
+				"id": 4,
+				"active": true,
+				"title": "Glass i olika smaker",
+				"description": "Fråga om dagens smaker",
+				"price": 45
+			}
+		]
+	},
+	{
+		"id": "menu-snacks",
+		"title": "SNACKS",
+		"description": "",
+		"type": "small snack",
+		"price": "",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Västerbotten krokett",
+				"description": "",
+				"price": 69
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Serrano krokett",
+				"description": "",
+				"price": 69
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Charkuterier",
+				"description": "",
+				"price": 69
+			},
+			{
+				"id": 4,
+				"active": true,
+				"title": "Ostar",
+				"description": "",
+				"price": 69
+			},
+			{
+				"id": 5,
+				"active": true,
+				"title": "Oliver",
+				"description": "",
+				"price": 59
+			},
+			{
+				"id": 6,
+				"active": true,
+				"title": "Cornichons med smetana & honung",
+				"description": "",
+				"price": 59
+			},
+			{
+				"id": 7,
+				"active": true,
+				"title": "Surdegsbröd, smör",
+				"description": "",
+				"price": 59
+			},
+			{
+				"id": 8,
+				"active": true,
+				"title": "Marconamandlar",
+				"description": "",
+				"price": 59
+			},
+			{
+				"id": 9,
+				"active": true,
+				"title": "Chips med havssalt",
+				"description": "",
+				"price": 39
+			}
+		]
+	},
+	{
+		"id": "menu-bubbels",
+		"title": "BUBBLOR",
+		"description": "",
+		"type": "small bubbels",
+		"price": "",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Prosseco",
+				"description": "",
+				"price": 120
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Deutz Classic",
+				"description": "",
+				"price": 150
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Deutz 2018",
+				"description": "",
+				"price": 200
+			},
+			{
+				"id": 4,
+				"active": true,
+				"title": "Deutz Rosé",
+				"description": "",
+				"price": 200
+			},
+			{
+				"id": 5,
+				"active": true,
+				"title": "Amour",
+				"description": "",
+				"price": 350
+			},
+			{
+				"id": 6,
+				"active": true,
+				"title": "Amour Rosé",
+				"description": "",
+				"price": 375
+			}
+		]
+	},
+	{
+		"id": "menu-cocktails",
+		"title": "DRINKAR",
+		"description": "",
+		"type": "small cocktails",
+		"price": "",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Tosterup Sprits",
+				"description": "",
+				"price": 150
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "Negroni",
+				"description": "",
+				"price": 150
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Dry martini",
+				"description": "",
+				"price": 150
+			}
+		]
+	},
+	{
+		"id": "menu-beer",
+		"title": "ÖL",
+		"description": "",
+		"type": "small beer",
+		"price": "",
+		"items": [
+			{
+				"id": 1,
+				"active": true,
+				"title": "Hof",
+				"description": "",
+				"price": 75
+			},
+			{
+				"id": 2,
+				"active": true,
+				"title": "1664 Blanc",
+				"description": "",
+				"price": 80
+			},
+			{
+				"id": 3,
+				"active": true,
+				"title": "Norrlandsljus",
+				"description": "",
+				"price": 80
+			}
+		]
+	}
+]
