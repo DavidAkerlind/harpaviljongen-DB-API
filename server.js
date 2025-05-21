@@ -13,7 +13,8 @@ const database = mongoose.connection;
 const allowedOrigins = [
 	'https://www.davidakerlind.com', // Production URL
 	'http://localhost:7000',
-	'http://localhost:5173', // Local dev URL
+	'http://localhost:5173',
+	'https://davidakerlind.github.io/harpaviljongen-admin-service/', // Local dev URL
 ];
 
 // Middlewares
