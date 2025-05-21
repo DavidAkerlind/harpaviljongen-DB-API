@@ -367,7 +367,7 @@ export async function updateMenuItem(req, res) {
 
 	try {
 		// Check if field is allowed to be updated
-		const allowedFields = ['title', 'description', 'price'];
+		const allowedFields = ['title', 'description', 'price', 'active'];
 		if (!allowedFields.includes(field)) {
 			return res
 				.status(400)
