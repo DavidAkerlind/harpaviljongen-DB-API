@@ -2,218 +2,245 @@
 
 ## Table of Contents
 
-1. [Base URL](#base-url)
-2. [Authentication](#authentication)
-3. [Common Response Format](#common-response-format)
-4. [Endpoints](#endpoints)
-    - [Menus](#menus)
-    - [Opening Hours](#opening-hours)
-    - [Events](#events)
-5. [Models](#models)
+1. [Overview](#overview)
+2. [API Configuration](#api-configuration)
+3. [Data Models](#data-models)
+4. [Authentication](#authentication)
+5. [API Endpoints](#api-endpoints)
 6. [Error Handling](#error-handling)
-7. [CORS](#cors)
-8. [Utils](#utils)
+7. [Development Setup](#development-setup)
 
-## Base URL
+## Overview
 
-Production: `https://harpaviljongen-db-api.onrender.com/api`
-Development: `http://localhost:7000/api`
+Backend API for Harpaviljongen restaurant managing:
 
-## Authentication
+-   Menus (food, drinks, wine)
+-   Opening hours
+-   Events and activities
 
-Currently no authentication required.
+### Base URLs
 
-## Common Response Format
+-   Production: `https://harpaviljongen-db-api.onrender.com/api`
+-   Development: `http://localhost:7000/api`
 
-```json
-{
-    "status": number,    // HTTP status code
-    "message": string,   // Response message
-    "success": boolean,  // Operation success status
-    "data": any         // Response data (optional)
+## API Configuration
+
+### CORS Configuration
+
+```typescript
+interface CorsConfig {
+	allowedOrigins: string[]; // Allowed domains
+	credentials: boolean; // Always false
+}
+
+const allowedOrigins = [
+	'https://www.davidakerlind.com',
+	'http://localhost:7000',
+	'http://localhost:5173',
+	'https://davidakerlind.github.io',
+];
+```
+
+### Response Format
+
+All API responses follow this structure:
+
+```typescript
+interface ApiResponse<T> {
+	status: number; // HTTP status code
+	message: string; // Human readable message
+	success: boolean; // Operation success status
+	data?: T; // Optional response data
 }
 ```
 
-## Endpoints
-
-### Menus
-
-#### Get All Menus
-
-```http
-GET /menus
-```
-
-#### Search Menu Items
-
-```http
-GET /menus/search/items?query={searchTerm}
-```
-
-#### Get Menu by ID
-
-```http
-GET /menus/{menuId}
-```
-
-#### Create Menu
-
-```http
-POST /menus
-Content-Type: application/json
-
-{
-    "id": "menu-new",
-    "title": "NEW MENU",
-    "type": "all",
-    "items": []
-}
-```
-
-#### Add Menu Item
-
-```http
-POST /menus/{menuId}/items
-Content-Type: application/json
-
-{
-    "title": "New Dish",
-    "description": "Description",
-    "price": 100,
-    "producer": "Producer Name" // Only for wine menu
-}
-```
-
-### Opening Hours
-
-#### Get All Opening Hours
-
-```http
-GET /openingHours
-```
-
-#### Create Opening Hours
-
-```http
-POST /openingHours
-Content-Type: application/json
-
-{
-    "day": "Måndag",
-    "hours": {
-        "from": "11:00",
-        "to": "22:00"
-    }
-}
-```
-
-#### Update Opening Hours
-
-```http
-PUT /openingHours/day/{day}
-Content-Type: application/json
-
-{
-    "hours": {
-        "from": "10:00",
-        "to": "23:00"
-    }
-}
-```
-
-Valid days: `["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"]`
-
-### Events
-
-#### Get All Events
-
-```http
-GET /events
-```
-
-#### Get Future Events
-
-```http
-GET /events/future
-```
-
-#### Create Event
-
-```http
-POST /events
-Content-Type: application/json
-
-{
-    "title": "Event Title",
-    "shortDescription": "Brief description (max 100 chars)",
-    "longDescription": "Detailed description",
-    "date": "2025-06-14",
-    "startTime": "20:00",
-    "endTime": "01:00",
-    "type": "dj",
-    "image": "/src/assets/pictures/event.png"
-}
-```
-
-Valid event types: `["dj", "wine", "private", "other"]`
-
-## Models
+## Data Models
 
 ### Menu Model
 
 ```typescript
-{
-    id: string;
-    title: string;
-    description?: string;
-    type: string;
-    items: {
-        id: string;
-        active: boolean;
-        title: string;
-        description?: string;
-        price: number | string;
-        producer?: string; // Only for wine menu
-    }[];
-    createdAt: string;
-    updatedAt: string;
+interface MenuItem {
+	id: string;
+	active: boolean;
+	title: string;
+	description?: string;
+	price: number | string;
+	producer?: string; // Only for wine menu
+	createdAt: string; // ISO timestamp
+	updatedAt: string; // ISO timestamp
+}
+
+interface Menu {
+	id: string; // e.g., "menu-wine", "menu-food"
+	title: string; // e.g., "Wine Menu", "Food Menu"
+	description?: string;
+	type: string; // "food" | "wine" | "drinks"
+	items: MenuItem[];
+	createdAt: string; // ISO timestamp
+	updatedAt: string; // ISO timestamp
 }
 ```
 
-### OpeningHours Model
+### Opening Hours Model
 
 ```typescript
-{
-	day: string; // One of valid Swedish weekdays
+interface OpeningHours {
+	day: WeekDay; // One of valid Swedish weekdays
 	hours: {
 		from: string; // Format: "HH:mm"
 		to: string; // Format: "HH:mm"
-	}
-	createdAt: string;
-	updatedAt: string;
+	};
+	createdAt: string; // ISO timestamp
+	updatedAt: string; // ISO timestamp
 }
+
+type WeekDay =
+	| 'Måndag'
+	| 'Tisdag'
+	| 'Onsdag'
+	| 'Torsdag'
+	| 'Fredag'
+	| 'Lördag'
+	| 'Söndag';
 ```
 
 ### Event Model
 
 ```typescript
-{
+interface Event {
+	eventId: string;
 	title: string;
 	shortDescription: string; // Max 100 characters
 	longDescription: string;
 	date: string; // Format: "YYYY-MM-DD"
 	startTime: string; // Format: "HH:mm"
 	endTime: string; // Format: "HH:mm"
-	type: 'dj' | 'wine' | 'private' | 'other';
-	image: string;
-	createdAt: string;
-	updatedAt: string;
+	type: EventType;
+	image: string; // Default: "/src/assets/pictures/event.png"
+	createdAt: string; // ISO timestamp
+	updatedAt: string; // ISO timestamp
 }
+
+type EventType = 'dj' | 'wine' | 'private' | 'other';
+```
+
+## API Endpoints
+
+### Menu Operations
+
+#### Get All Menus
+
+```http
+GET /api/menus
+Response: ApiResponse<Menu[]>
+```
+
+#### Get Menu by ID
+
+```http
+GET /api/menus/{menuId}
+Response: ApiResponse<Menu>
+```
+
+#### Create Menu
+
+```http
+POST /api/menus
+Body: Omit<Menu, "id" | "createdAt" | "updatedAt">
+Response: ApiResponse<Menu>
+```
+
+#### Add Menu Item
+
+```http
+POST /api/menus/{menuId}/items
+Body: Omit<MenuItem, "id" | "active" | "createdAt" | "updatedAt">
+Response: ApiResponse<MenuItem>
+```
+
+#### Update Menu Item
+
+```http
+PUT /api/menus/{menuId}/items/{itemId}/{field}
+Body: { value: any }
+Allowed fields: ["title", "description", "price", "active"]
+Response: ApiResponse<MenuItem>
+```
+
+#### Toggle Menu Item
+
+```http
+PATCH /api/menus/{menuId}/items/{itemId}/toggle
+Response: ApiResponse<MenuItem>
+```
+
+### Opening Hours Operations
+
+#### Get All Opening Hours
+
+```http
+GET /api/openingHours
+Response: ApiResponse<OpeningHours[]>
+```
+
+#### Create Opening Hours
+
+```http
+POST /api/openingHours
+Body: Omit<OpeningHours, "createdAt" | "updatedAt">
+Response: ApiResponse<OpeningHours>
+```
+
+#### Update Opening Hours
+
+```http
+PUT /api/openingHours/day/{day}
+Body: { hours: { from: string, to: string } }
+Response: ApiResponse<OpeningHours>
+```
+
+### Event Operations
+
+#### Get All Events
+
+```http
+GET /api/events
+Response: ApiResponse<Event[]>
+```
+
+#### Get Future Events
+
+```http
+GET /api/events/future
+Response: ApiResponse<Event[]>
+```
+
+#### Create Event
+
+```http
+POST /api/events
+Body: Omit<Event, "eventId" | "createdAt" | "updatedAt">
+Response: ApiResponse<Event>
+```
+
+#### Update Event
+
+```http
+PUT /api/events/{eventId}
+Body: Partial<Event>
+Response: ApiResponse<Event>
+```
+
+#### Delete Event
+
+```http
+DELETE /api/events/{eventId}
+Response: ApiResponse<Event>
 ```
 
 ## Error Handling
 
-All endpoints return appropriate HTTP status codes:
+### HTTP Status Codes
 
 -   200: Success
 -   201: Created
@@ -221,63 +248,61 @@ All endpoints return appropriate HTTP status codes:
 -   404: Not Found
 -   500: Server Error
 
-Error response format:
+### Error Response Example
 
 ```json
 {
-    "status": number,
-    "message": string,
-    "success": false
+	"status": 400,
+	"message": "Invalid input data",
+	"success": false
 }
 ```
 
-## CORS
+## Development Setup
 
-Allowed origins:
+### Prerequisites
 
--   https://www.davidakerlind.com
--   http://localhost:7000
--   http://localhost:5173
--   https://davidakerlind.github.io
-
-## Utils
-
-### Time Formatting
-
-All timestamps are automatically converted to Swedish time format using the `formatSwedishTime` utility.
-
-### Response Construction
-
-All responses are constructed using the `constructResObj` utility to ensure consistent response format.
-
-## Development
+-   Node.js 18+
+-   MongoDB 5+
+-   npm or yarn
 
 ### Environment Variables
 
-Required variables in `.env`:
+Create a `.env` file:
 
-```
+```env
 PORT=7000
 CONNECTION_STRING=mongodb+srv://[username]:[password]@[cluster].mongodb.net/[database]
 ```
 
-### Running Locally
-
-1. Clone repository
-2. Install dependencies: `npm install`
-3. Set up environment variables
-4. Start server: `npm run dev`
-
-### Testing API
-
-You can test endpoints using tools like Postman or cURL. Example:
+### Installation
 
 ```bash
-# Get all menus
-curl http://localhost:7000/api/menus
+git clone https://github.com/yourusername/harpaviljongen-DB-API.git
+cd harpaviljongen-DB-API
+npm install
+npm run dev
+```
 
-# Create new event
+### Database Schema Validation
+
+The API uses Mongoose schemas with strict validation. All timestamps are automatically converted to Swedish time format.
+
+### Testing Examples
+
+```bash
+# Create new menu
+curl -X POST http://localhost:7000/api/menus ^
+-H "Content-Type: application/json" ^
+-d "{\"id\":\"menu-food\",\"title\":\"Food Menu\",\"type\":\"food\",\"items\":[]}"
+
+# Add menu item
+curl -X POST http://localhost:7000/api/menus/menu-food/items ^
+-H "Content-Type: application/json" ^
+-d "{\"title\":\"Pasta\",\"description\":\"Fresh pasta\",\"price\":159}"
+
+# Create event
 curl -X POST http://localhost:7000/api/events ^
 -H "Content-Type: application/json" ^
--d "{\"title\":\"Test Event\",\"shortDescription\":\"Short desc\",\"longDescription\":\"Long desc\",\"date\":\"2025-06-14\",\"startTime\":\"20:00\",\"endTime\":\"01:00\",\"type\":\"dj\"}"
+-d "{\"title\":\"Wine Tasting\",\"shortDescription\":\"Exclusive wine tasting\",\"longDescription\":\"Join us for an evening of fine wines\",\"date\":\"2025-06-14\",\"startTime\":\"18:00\",\"endTime\":\"21:00\",\"type\":\"wine\"}"
 ```
