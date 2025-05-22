@@ -1,5 +1,6 @@
 import EventService from '../services/eventService.js';
 import { constructResObj } from '../utils/constructResObj.js';
+import { v4 as uuidv4 } from 'uuid';
 
 export class EventController {
 	static async getAllEvents(req, res) {
@@ -111,6 +112,17 @@ export class EventController {
 						)
 					);
 			}
+
+			eventData = {
+				eventId: uuidv4().slice(0, 8),
+				title: eventData.title,
+				shortDescription: eventData.shortDescription,
+				longDescription: eventData.longDescription,
+				date: eventData.date,
+				startTime: eventData.startTime,
+				endTime: eventData.endTime,
+				type: eventData.type,
+			};
 
 			const event = await EventService.createEvent(eventData);
 			res.status(201).json(

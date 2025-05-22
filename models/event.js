@@ -7,6 +7,11 @@ const EVENT_TYPES = ['dj', 'wine', 'private', 'other'];
 
 const EventSchema = new Schema(
 	{
+		eventId: {
+			type: String,
+			unique: true,
+			required: true,
+		},
 		title: {
 			type: String,
 			required: true,
@@ -54,8 +59,6 @@ const EventSchema = new Schema(
 		collection: 'events',
 	}
 );
-
-// ...existing code...
 
 // Anpassad JSON-konvertering för timestamps
 EventSchema.set('toJSON', {
