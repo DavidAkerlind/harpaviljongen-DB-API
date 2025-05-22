@@ -1,6 +1,7 @@
 import express from 'express';
 import menuRouter from './routes/menuRouter.js';
 import openingHoursRouter from './routes/openingHoursRouter.js';
+import eventsRouter from './routes/eventRouter.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -23,6 +24,7 @@ app.use(logger);
 // Routes
 app.use('/api/menus', menuRouter);
 app.use('/api/openingHours', openingHoursRouter);
+app.use('/api/events', eventsRouter);
 
 // Felhantering av databas
 database.on('error', (error) => console.log(error));
@@ -35,3 +37,7 @@ database.once('connected', () => {
 		console.log(`Server is running on port ${PORT}`);
 	});
 });
+
+// ErrorHandler
+
+app.use(errorHandler);
