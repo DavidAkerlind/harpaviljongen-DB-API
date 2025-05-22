@@ -14,8 +14,8 @@ const VALID_DAYS = [
 
 const HoursSchema = new Schema(
 	{
-		from: { type: String, required: true }, // t.ex. "11:00"
-		to: { type: String, required: true }, // t.ex. "21:00" eller "sent"
+		from: { type: String, required: true, default: '' }, // t.ex. "11:00"
+		to: { type: String, required: true, default: '' }, // t.ex. "21:00" eller "sent"
 	},
 	{ _id: false } // behövs inte egen _id för subobjektet
 );

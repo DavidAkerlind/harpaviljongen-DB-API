@@ -20,10 +20,20 @@ class OpeningHoursService {
 
 	// Ny metod för att uppdatera via dag-namn
 	async updateOpeningHoursByDay(day, updates) {
-		// Validera att hours har rätt format om det finns med i updates
-		if (updates.hours && (!updates.hours.from || !updates.hours.to)) {
-			throw new Error('Hours must contain both "from" and "to" fields');
+		// Validera att hours existerar om det finns med i updates
+		if (
+			updates.hours &&
+			!('from' in updates.hours || 'to' in updates.hours)
+		) {
+			throw new Error('Hours must contain from and/or to fields');
 		}
+
+		// Tillåt tomma strängar
+		if (updates.hours) {
+			updates.hours.from = updates.hours.from ?? '';
+			updates.hours.to = updates.hours.to ?? '';
+		}
+
 		return await OpeningHour.findOneAndUpdate(
 			{ day },
 			{ $set: updates },
@@ -45,6 +55,13 @@ class OpeningHoursService {
 			throw new Error(
 				`Invalid day. Must be one of: ${validDays.join(', ')}`
 			);
+		}
+		// Säkerställ att hours finns och har from/to egenskaper
+		if (!data.hours) {
+			data.hours = { from: '', to: '' };
+		} else {
+			data.hours.from = data.hours.from ?? '';
+			data.hours.to = data.hours.to ?? '';
 		}
 		return await OpeningHour.create(data);
 	}
