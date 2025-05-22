@@ -1,45 +1,31 @@
 import { Router } from 'express';
-import { fallbackController } from '../controllers/fallbackController.js';
-import {
-	filterById,
-	getAllMenus,
-	deleteMenu,
-	postMenu,
-	updateMenu,
-	postBulk,
-	addMenuItem,
-	deleteMenuItem,
-	toggleMenuItem,
-	updateMenuItem,
-	getItemsInMenu,
-	searchMenuItems,
-	deleteAllMenus,
-} from '../controllers/menuController.js';
+import { MenuController } from '../controllers/menuController.js';
+import { fallbackController } from '../services/fallbackService.js';
 
 const router = Router();
 
-// ==== GET ====
-router.get('/', getAllMenus);
-router.get('/search/items', searchMenuItems);
-router.get('/:menuId', filterById);
-router.get('/:menuId/items', getItemsInMenu);
+// GET routes
+router.get('/', MenuController.getAllMenus);
+router.get('/search/items', MenuController.searchMenuItems);
+router.get('/:menuId', MenuController.getMenuById);
+router.get('/:menuId/items', MenuController.getMenuItems);
 
-// ==== POST ====
-router.post('/', postMenu);
-router.post('/bulk', postBulk);
-router.post('/:menuId/items', addMenuItem);
+// POST routes
+router.post('/', MenuController.createMenu);
+router.post('/bulk', MenuController.createBulkMenus);
+router.post('/:menuId/items', MenuController.addMenuItem);
 
-// ==== DELETE ====
-router.delete('/:menuId', deleteMenu); // Ex: DELETE /api/menus/weekly-wine för att ta bort den menyn helt
-router.delete('/:menuId/items/:itemId', deleteMenuItem);
-router.delete('/', deleteAllMenus);
+// PUT routes
+router.put('/:menuId/:field', MenuController.updateMenu);
+router.put('/:menuId/items/:itemId/:field', MenuController.updateMenuItem);
 
-// ==== PUT ====
-router.put('/:menuId/:field', updateMenu); // Ex: PUT /api/menus/menu-always/title med en body på { "value": "nyttVärde"}
-router.put('/:menuId/items/:itemId/:field', updateMenuItem); // Ex: PUT /api/menus/menu-always/items/1/title med en body på { "value": "nyttVärde"} 	const allowedFields = ['title', 'description', 'price', 'active'];
+// PATCH routes
+router.patch('/:menuId/items/:itemId/toggle', MenuController.toggleMenuItem);
 
-// ==== PATCH ====
-router.patch('/:menuId/items/:itemId/toggle', toggleMenuItem);
+// DELETE routes
+router.delete('/:menuId', MenuController.deleteMenu);
+router.delete('/:menuId/items/:itemId', MenuController.deleteMenuItem);
+router.delete('/', MenuController.deleteAllMenus);
 
 // ==== FALLBACK ====
 router.use(fallbackController);
