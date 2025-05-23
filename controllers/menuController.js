@@ -182,7 +182,12 @@ export class MenuController {
 			const { menuId, field } = req.params;
 			const { value } = req.body;
 
-			const allowedFields = ['title', 'description', 'type'];
+			let allowedFields = ['title', 'description', 'type'];
+
+			if (menuId === 'menu-wine') {
+				allowedFields.push('price');
+			}
+
 			if (!allowedFields.includes(field)) {
 				return res
 					.status(400)
