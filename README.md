@@ -6,7 +6,14 @@
 2. [API Configuration](#api-configuration)
 3. [Data Models](#data-models)
 4. [Authentication](#authentication)
+    - [Login/Logout](#auth-operations)
+    - [User Model](#user-model)
+    - [Auth Flow](#authentication-flow)
 5. [API Endpoints](#api-endpoints)
+    - [Menu Operations](#menu-operations)
+    - [Opening Hours Operations](#opening-hours-operations)
+    - [Event Operations](#event-operations)
+    - [Auth Operations](#auth-operations)
 6. [Error Handling](#error-handling)
 7. [Development Setup](#development-setup)
 
@@ -238,6 +245,95 @@ DELETE /api/events/{eventId}
 Response: ApiResponse<Event>
 ```
 
+### Auth Operations
+
+#### Login
+
+```http
+POST /api/auth/login
+Body: {
+    "username": string,  // Minimum 6 characters
+    "password": string   // Minimum 8 characters
+}
+Response: {
+    "success": boolean,
+    "message": string
+}
+```
+
+#### Logout
+
+```http
+GET /api/auth/logout
+Response: ApiResponse<null>
+```
+
+### User Model
+
+```typescript
+interface User {
+	username: string; // Unique, min 6 chars
+	password: string; // Min 8 chars
+	userId: string; // Unique identifier
+}
+```
+
+### Authentication Flow
+
+1. User makes POST request to `/api/auth/login` with credentials
+2. If credentials are valid, server sets global user state
+3. User remains authenticated until:
+    - Logout is called
+    - Server restarts
+    - Session expires
+
+### Example Login Request
+
+```bash
+curl -X POST http://localhost:7000/api/auth/login ^
+-H "Content-Type: application/json" ^
+-d "{\"username\":\"adminuser\",\"password\":\"password123\"}"
+```
+
+### Example Logout Request
+
+```bash
+curl http://localhost:7000/api/auth/logout
+```
+
+### Authentication Responses
+
+#### Successful Login
+
+```json
+{
+	"success": true,
+	"message": "User logged in successfully"
+}
+```
+
+#### Failed Login
+
+```json
+{
+	"status": 400,
+	"message": "Username or password are incorrect",
+	"success": false
+}
+```
+
+#### Missing Credentials
+
+```json
+{
+	"status": 400,
+	"message": "Both username and password are required",
+	"success": false
+}
+```
+
+// ...existing code...
+
 ## Error Handling
 
 ### HTTP Status Codes
@@ -260,11 +356,12 @@ Response: ApiResponse<Event>
 
 ## Development Setup
 
-### Prerequisites
+### What you need
 
 -   Node.js 18+
 -   MongoDB 5+
 -   npm or yarn
+-   Valid user credentials for authenticated routes
 
 ### Environment Variables
 
