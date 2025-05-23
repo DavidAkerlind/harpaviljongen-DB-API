@@ -2,6 +2,7 @@ import express from 'express';
 import menuRouter from './routes/menuRouter.js';
 import openingHoursRouter from './routes/openingHoursRouter.js';
 import eventsRouter from './routes/eventRouter.js';
+import authRouter from './routes/authRouter.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -25,6 +26,7 @@ app.use(logger);
 app.use('/api/menus', menuRouter);
 app.use('/api/openingHours', openingHoursRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/auth', authRouter);
 
 // Felhantering av databas
 database.on('error', (error) => console.log(error));
