@@ -6,7 +6,7 @@ class EventService {
 	}
 
 	async getEventById(eventId) {
-		return await Event.findById(eventId);
+		return await Event.find({ eventId: eventId });
 	}
 
 	async getEventsByType(type) {
@@ -18,15 +18,15 @@ class EventService {
 	}
 
 	async updateEvent(eventId, updates) {
-		return await Event.findByIdAndUpdate(
-			eventId,
+		return await Event.findOneAndUpdate(
+			{ eventId: eventId },
 			{ $set: updates },
 			{ new: true }
 		);
 	}
 
 	async deleteEvent(eventId) {
-		return await Event.findByIdAndDelete(eventId);
+		return await Event.findOneAndDelete({ eventId: eventId });
 	}
 
 	async getFutureEvents() {

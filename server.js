@@ -21,6 +21,8 @@ const database = mongoose.connection;
 app.use(express.json());
 app.use(corsMiddleware);
 app.use(logger);
+// Enable pre-flight requests for all routes
+// app.options('*', corsMiddleware);
 
 // Routes
 app.use('/api/menus', menuRouter);

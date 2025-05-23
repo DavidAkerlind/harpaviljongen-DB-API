@@ -20,6 +20,7 @@ export class EventController {
 				)
 			);
 		} catch (error) {
+			console.log(error.message);
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message)
 			);
@@ -50,6 +51,7 @@ export class EventController {
 				)
 			);
 		} catch (error) {
+			console.log(error.message);
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message)
 			);
@@ -70,10 +72,10 @@ export class EventController {
 
 	static async createEvent(req, res) {
 		try {
-			const eventData = req.body;
-
+			let eventData = req.body;
+			console.log(eventData);
 			// Validate required fields
-			const requiredFields = [
+			let requiredFields = [
 				'title',
 				'shortDescription',
 				'longDescription',
@@ -123,12 +125,13 @@ export class EventController {
 				endTime: eventData.endTime,
 				type: eventData.type,
 			};
-
+			console.log(eventData);
 			const event = await EventService.createEvent(eventData);
 			res.status(201).json(
 				constructResObj(201, 'Event created successfully', true, event)
 			);
 		} catch (error) {
+			console.log(error.message);
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message)
 			);
@@ -154,6 +157,7 @@ export class EventController {
 				constructResObj(200, 'Event updated successfully', true, event)
 			);
 		} catch (error) {
+			console.log(error.message);
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message)
 			);
@@ -179,6 +183,7 @@ export class EventController {
 				constructResObj(200, 'Event deleted successfully', true, event)
 			);
 		} catch (error) {
+			console.log(error.message);
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message)
 			);

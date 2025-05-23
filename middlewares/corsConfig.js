@@ -18,4 +18,7 @@ export const corsMiddleware = cors({
 			return callback(new Error('Not allowed by CORS'));
 		}
 	},
+	credentials: true, // This is crucial for handling credentials
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+	allowedHeaders: ['Content-Type', 'Authorization'],
 });
