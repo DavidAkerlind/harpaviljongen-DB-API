@@ -4,6 +4,8 @@ export const allowedOrigins = [
 	'https://www.davidakerlind.com', // Production URL
 	'http://localhost:7000', // Local dev URL
 	'http://localhost:5173', // Local dev URL
+	'http://localhost:5174', // Local dev URL
+	'http://localhost:5175', // Local dev URL
 	'https://davidakerlind.github.io', // Admin Service URL
 ];
 
