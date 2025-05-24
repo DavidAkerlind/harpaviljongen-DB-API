@@ -6,7 +6,7 @@ class EventService {
 	}
 
 	async getEventById(eventId) {
-		return await Event.find({ eventId: eventId });
+		return await Event.findOne({ eventId: eventId });
 	}
 
 	async getEventsByType(type) {
