@@ -10,3 +10,13 @@ export async function getUser(username) {
 		return null;
 	}
 }
+
+export async function registerUser(user) {
+	try {
+		const result = await User.create(user);
+		return result;
+	} catch (error) {
+		console.log(error.message);
+		return null;
+	}
+}
