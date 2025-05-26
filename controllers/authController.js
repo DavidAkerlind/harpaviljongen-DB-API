@@ -2,17 +2,8 @@ import { getUser } from '../services/userService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 import { v4 as uuid } from 'uuid';
 import { registerUser } from '../services/userService.js';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-import {
-	comparePasswords,
-	hashPassword,
-	singToken,
-} from '../utils/authUtil.js';
 
-dotenv.config();
-const SECRET = process.env.SECRET;
+import { comparePasswords, hashPassword } from '../utils/authUtil.js';
 
 export class AuthController {
 	static async login(req, res, next) {
@@ -22,13 +13,11 @@ export class AuthController {
 			if (user) {
 				const isSame = comparePasswords(password, user.password);
 				if (isSame) {
-					const token = singToken({ userId: user.userId });
 					res.json(
 						constructResObj(
 							200,
 							'User logged in successfully',
-							true,
-							{ token: `Bearer ${token}`, userId: user.userId }
+							true
 						)
 					);
 				} else {
