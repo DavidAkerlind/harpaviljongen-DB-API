@@ -4,7 +4,7 @@ import { fallbackController } from '../services/fallbackService.js';
 import { authenticateUser } from '../middlewares/auth.js';
 
 const router = Router();
-router.use(authenticateUser);
+/* router.use(authenticateUser);*/
 
 // GET routes
 router.get('/', MenuController.getAllMenus);
