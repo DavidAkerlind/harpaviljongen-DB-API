@@ -225,7 +225,13 @@ export class MenuController {
 			const { menuId, itemId, field } = req.params;
 			const { value } = req.body;
 
-			const allowedFields = ['title', 'description', 'price', 'active'];
+			const allowedFields = [
+				'title',
+				'description',
+				'price',
+				'active',
+				'producer',
+			];
 			if (!allowedFields.includes(field)) {
 				return res
 					.status(400)
