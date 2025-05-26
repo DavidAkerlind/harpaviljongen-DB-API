@@ -5,6 +5,11 @@ import { registerUser } from '../services/userService.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import {
+	comparePasswords,
+	hashPassword,
+	singToken,
+} from '../utils/authUtil.js';
 
 dotenv.config();
 const SECRET = process.env.SECRET;
@@ -15,16 +20,9 @@ export class AuthController {
 			const { username, password } = req.body;
 			const user = await getUser(username);
 			if (user) {
-				const isSame = await bcrypt.compare(password, user.password);
+				const isSame = comparePasswords(password, user.password);
 				if (isSame) {
-					const token = jwt.sing(
-						{
-							userId: user.userId,
-							username: user.username,
-						},
-						SECRET,
-						{ expiresIn: 60 * 60 }
-					);
+					const token = singToken({ userId: user.userId });
 					res.json(
 						constructResObj(
 							200,
@@ -60,7 +58,7 @@ export class AuthController {
 		try {
 			const { username, password } = req.body;
 			const existingUser = await getUser(username);
-			const hashedPassword = await bcrypt.hash(password, 10);
+			const hashedPassword = await hashPassword(password);
 
 			if (existingUser) {
 				next({

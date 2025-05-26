@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { MenuController } from '../controllers/menuController.js';
 import { fallbackController } from '../services/fallbackService.js';
+import { authenticateUser } from '../middlewares/auth.js';
 
 const router = Router();
+router.use(authenticateUser);
 
 // GET routes
 router.get('/', MenuController.getAllMenus);

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { EventController } from '../controllers/eventController.js';
 import { fallbackController } from '../services/fallbackService.js';
+import { authenticateUser } from '../middlewares/auth.js';
 
 const router = Router();
+
+router.use(authenticateUser);
 
 // GET routes
 router.get('/', EventController.getAllEvents);
