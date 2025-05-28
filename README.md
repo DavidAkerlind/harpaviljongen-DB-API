@@ -403,3 +403,7 @@ curl -X POST http://localhost:7000/api/events ^
 -H "Content-Type: application/json" ^
 -d "{\"title\":\"Wine Tasting\",\"shortDescription\":\"Exclusive wine tasting\",\"longDescription\":\"Join us for an evening of fine wines\",\"date\":\"2025-06-14\",\"startTime\":\"18:00\",\"endTime\":\"21:00\",\"type\":\"wine\"}"
 ```
+
+---
+
+🧑‍💻 Byggt av [David Åkerlind](https://github.com/DavidAkerlind)
