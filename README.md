@@ -1,5 +1,7 @@
 # Harpaviljongen API Documentation
 
+## You can find the docs [here](https://harpaviljongen-db-api.onrender.com/api/docs/)
+
 ## Table of Contents
 
 1. [Overview](#overview)
