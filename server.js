@@ -10,19 +10,25 @@ import cors from 'cors';
 import { corsMiddleware } from './middlewares/corsConfig.js';
 import logger from './middlewares/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
+// Swagger imports
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
+
 // Config
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.CONNECTION_STRING);
 const database = mongoose.connection;
+const swaggerDocs = YAML.load('./docs/docs.yml');
 
 // Middlewares
 app.use(express.json());
 app.use(corsMiddleware);
 app.use(logger);
-// Enable pre-flight requests for all routes
-// app.options('*', corsMiddleware);
+
+// Swagger Documentation Route
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Routes
 app.use('/api/menus', menuRouter);
@@ -43,5 +49,4 @@ database.once('connected', () => {
 });
 
 // ErrorHandler
-
 app.use(errorHandler);

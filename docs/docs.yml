@@ -1,0 +1,791 @@
+openapi: 3.0.1
+info:
+    title: Harpaviljongen API
+    description: API documentation for Harpaviljongen restaurant managing menus, opening hours, and events
+    version: 1.0.0
+    contact:
+        name: API Support
+        url: https://davidakerlind.com
+servers:
+    - url: https://harpaviljongen-db-api.onrender.com/api
+      description: Production server
+    - url: http://localhost:7000/api
+      description: Development server
+
+components:
+    schemas:
+        ApiResponse:
+            type: object
+            properties:
+                status:
+                    type: integer
+                    description: HTTP status code
+                    example: 200
+                message:
+                    type: string
+                    description: Human readable message
+                    example: 'Operation successful'
+                success:
+                    type: boolean
+                    description: Operation success status
+                    example: true
+                data:
+                    description: Optional response data
+                    oneOf:
+                        - type: object
+                        - type: array
+                        - type: string
+                        - type: null
+
+        MenuItem:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: 'item-abc123'
+                active:
+                    type: boolean
+                    example: true
+                title:
+                    type: string
+                    example: 'Pasta Carbonara'
+                description:
+                    type: string
+                    example: 'Fresh pasta with cream sauce'
+                price:
+                    oneOf:
+                        - type: number
+                        - type: string
+                    example: 159
+                producer:
+                    type: string
+                    description: 'Only for wine menu'
+                    example: 'Château Margaux'
+                createdAt:
+                    type: string
+                    format: date-time
+                    example: '2025-05-28 14:30:00'
+                updatedAt:
+                    type: string
+                    format: date-time
+                    example: '2025-05-28 14:30:00'
+
+        Menu:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: 'menu-wine'
+                title:
+                    type: string
+                    example: 'Wine Menu'
+                description:
+                    type: string
+                    example: 'Our selection of fine wines'
+                type:
+                    type: string
+                    enum: ['food', 'wine', 'drinks']
+                    example: 'wine'
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MenuItem'
+                        $ref: '#/components/schemas/MenuItem'
+
+                createdAt:
+                    type: string
+                    format: date-time
+                updatedAt:
+                    type: string
+                    format: date-time
+
+        OpeningHours:
+            type: object
+            properties:
+                day:
+                    type: string
+                    enum:
+                        [
+                            'Måndag',
+                            'Tisdag',
+                            'Onsdag',
+                            'Torsdag',
+                            'Fredag',
+                            'Lördag',
+                            'Söndag',
+                        ]
+                    example: 'Måndag'
+                hours:
+                    type: object
+                    properties:
+                        from:
+                            type: string
+                            pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$|^$'
+                            example: '11:00'
+                        to:
+                            type: string
+                            pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$|^$'
+                            example: '22:00'
+                createdAt:
+                    type: string
+                    format: date-time
+                updatedAt:
+                    type: string
+                    format: date-time
+
+        Event:
+            type: object
+            properties:
+                eventId:
+                    type: string
+                    example: 'evt-123abc'
+                title:
+                    type: string
+                    example: 'DJ Night with DJ Example'
+                shortDescription:
+                    type: string
+                    maxLength: 100
+                    example: 'Dancing and cocktails all night!'
+                longDescription:
+                    type: string
+                    example: 'Join us for an amazing night with our resident DJ playing the best house and disco music.'
+                date:
+                    type: string
+                    format: date
+                    example: '2025-06-14'
+                startTime:
+                    type: string
+                    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+                    example: '20:00'
+                endTime:
+                    type: string
+                    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+                    example: '01:00'
+                type:
+                    type: string
+                    enum: ['dj', 'wine', 'private', 'other']
+                    example: 'dj'
+                image:
+                    type: string
+                    example: '/src/assets/pictures/event.png'
+                createdAt:
+                    type: string
+                    format: date-time
+                updatedAt:
+                    type: string
+                    format: date-time
+
+        User:
+            type: object
+            properties:
+                username:
+                    type: string
+                    minLength: 6
+                    example: 'adminuser'
+                password:
+                    type: string
+                    minLength: 8
+                    example: 'password123'
+                userId:
+                    type: string
+                    example: 'xxxxx'
+
+        LoginRequest:
+            type: object
+            required:
+                - username
+                - password
+            properties:
+                username:
+                    type: string
+                    minLength: 6
+                    example: 'adminuser'
+                password:
+                    type: string
+                    minLength: 8
+                    example: 'password123'
+
+        CreateMenuRequest:
+            type: object
+            required:
+                - id
+                - title
+                - type
+            properties:
+                id:
+                    type: string
+                    example: 'menu-food'
+                title:
+                    type: string
+                    example: 'Food Menu'
+                description:
+                    type: string
+                    example: 'Our delicious food selection'
+                type:
+                    type: string
+                    enum: ['food', 'wine', 'drinks']
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/MenuItem'
+                    default: []
+
+        CreateMenuItemRequest:
+            type: object
+            required:
+                - title
+                - price
+            properties:
+                title:
+                    type: string
+                    example: 'Pasta Carbonara'
+                description:
+                    type: string
+                    example: 'Fresh pasta with cream sauce'
+                price:
+                    oneOf:
+                        - type: number
+                        - type: string
+                    example: 159
+                producer:
+                    type: string
+                    description: 'Only for wine menu'
+
+        CreateEventRequest:
+            type: object
+            required:
+                - title
+                - shortDescription
+                - longDescription
+                - date
+                - startTime
+                - endTime
+                - type
+            properties:
+                title:
+                    type: string
+                shortDescription:
+                    type: string
+                    maxLength: 100
+                longDescription:
+                    type: string
+                date:
+                    type: string
+                    format: date
+                startTime:
+                    type: string
+                    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+                endTime:
+                    type: string
+                    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+                type:
+                    type: string
+                    enum: ['dj', 'wine', 'private', 'other']
+                image:
+                    type: string
+                    default: '/src/assets/pictures/event.png'
+
+    responses:
+        BadRequestError:
+            description: Bad Request
+            content:
+                application/json:
+                    schema:
+                        allOf:
+                            - $ref: '#/components/schemas/ApiResponse'
+                            - type: object
+                              properties:
+                                  status:
+                                      example: 400
+                                  success:
+                                      example: false
+                                  message:
+                                      example: 'Invalid input data'
+
+        NotFoundError:
+            description: Resource not found
+            content:
+                application/json:
+                    schema:
+                        allOf:
+                            - $ref: '#/components/schemas/ApiResponse'
+                            - type: object
+                              properties:
+                                  status:
+                                      example: 404
+                                  success:
+                                      example: false
+                                  message:
+                                      example: 'Resource not found'
+
+        ServerError:
+            description: Internal server error
+            content:
+                application/json:
+                    schema:
+                        allOf:
+                            - $ref: '#/components/schemas/ApiResponse'
+                            - type: object
+                              properties:
+                                  status:
+                                      example: 500
+                                  success:
+                                      example: false
+                                  message:
+                                      example: 'Server error'
+
+paths:
+    # Menu Operations
+    /menus:
+        get:
+            tags:
+                - Menus
+            summary: Get all menus
+            description: Retrieve all restaurant menus
+            responses:
+                '200':
+                    description: Menus retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/Menu'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+                '500':
+                    $ref: '#/components/responses/ServerError'
+
+        post:
+            tags:
+                - Menus
+            summary: Create a new menu
+            description: Create a new restaurant menu
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateMenuRequest'
+            responses:
+                '201':
+                    description: Menu created successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/Menu'
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+                '500':
+                    $ref: '#/components/responses/ServerError'
+
+    /menus/search/items:
+        get:
+            tags:
+                - Menus
+            summary: Search menu items
+            description: Search for menu items by query string
+            parameters:
+                - in: query
+                  name: query
+                  required: true
+                  schema:
+                      type: string
+                  description: Search query
+                  example: 'toast'
+            responses:
+                '200':
+                    description: Search results retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          message: 
+                                            example: 'Found 1 items matching: \"toast\"'
+                                          data:
+                                              type: object
+                                              properties:
+                                                menuId:
+                                                    type: string
+                                                    example: 'menu-wine'
+                                                menuTitle:
+                                                    type: string
+                                                    example: 'Wine Menu'
+                                                items:
+                                                    type: array
+                                                    items:
+                                                        $ref: '#/components/schemas/MenuItem'
+                                                        $ref: '#/components/schemas/MenuItem'
+
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /menus/{menuId}:
+        get:
+            tags:
+                - Menus
+            summary: Get menu by ID
+            parameters:
+                - in: path
+                  name: menuId
+                  required: true
+                  schema:
+                      type: string
+                  example: 'menu-wine'
+            responses:
+                '200':
+                    description: Menu retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/Menu'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /menus/{menuId}/items:
+        get:
+            tags:
+                - Menus
+            summary: Get menu items
+            parameters:
+                - in: path
+                  name: menuId
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Menu items retrieved successfully
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+        post:
+            tags:
+                - Menus
+            summary: Add menu item
+            parameters:
+                - in: path
+                  name: menuId
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateMenuItemRequest'
+            responses:
+                '201':
+                    description: Menu item added successfully
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    # Opening Hours Operations
+    /openingHours:
+        get:
+            tags:
+                - Opening Hours
+            summary: Get all opening hours
+            responses:
+                '200':
+                    description: Opening hours retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/OpeningHours'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+        post:
+            tags:
+                - Opening Hours
+            summary: Create opening hours
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - day
+                                - hours
+                            properties:
+                                day:
+                                    type: string
+                                    enum:
+                                        [
+                                            'Måndag',
+                                            'Tisdag',
+                                            'Onsdag',
+                                            'Torsdag',
+                                            'Fredag',
+                                            'Lördag',
+                                            'Söndag',
+                                        ]
+                                hours:
+                                    type: object
+                                    properties:
+                                        from:
+                                            type: string
+                                        to:
+                                            type: string
+            responses:
+                '201':
+                    description: Opening hours created successfully
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+
+    /openingHours/day/{day}:
+        put:
+            tags:
+                - Opening Hours
+            summary: Update opening hours by day
+            parameters:
+                - in: path
+                  name: day
+                  required: true
+                  schema:
+                      type: string
+                      enum:
+                          [
+                              'Måndag',
+                              'Tisdag',
+                              'Onsdag',
+                              'Torsdag',
+                              'Fredag',
+                              'Lördag',
+                              'Söndag',
+                          ]
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                hours:
+                                    type: object
+                                    properties:
+                                        from:
+                                            type: string
+                                        to:
+                                            type: string
+            responses:
+                '200':
+                    description: Opening hours updated successfully
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    # Event Operations
+    /events:
+        get:
+            tags:
+                - Events
+            summary: Get all events
+            responses:
+                '200':
+                    description: Events retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/Event'
+
+        post:
+            tags:
+                - Events
+            summary: Create event
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateEventRequest'
+            responses:
+                '201':
+                    description: Event created successfully
+
+    /events/future:
+        get:
+            tags:
+                - Events
+            summary: Get future events
+            responses:
+                '200':
+                    description: Future events retrieved successfully
+
+    /events/{eventId}:
+        get:
+            tags:
+                - Events
+            summary: Get event by ID
+            parameters:
+                - in: path
+                  name: eventId
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Event retrieved successfully
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+        put:
+            tags:
+                - Events
+            summary: Update event
+            parameters:
+                - in: path
+                  name: eventId
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Event'
+            responses:
+                '200':
+                    description: Event updated successfully
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+        delete:
+            tags:
+                - Events
+            summary: Delete event
+            parameters:
+                - in: path
+                  name: eventId
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Event deleted successfully
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    # Authentication Operations
+    /auth/login:
+        post:
+            tags:
+                - Authentication
+            summary: User login
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LoginRequest'
+            responses:
+                '200':
+                    description: User logged in successfully
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: 'User logged in successfully'
+                '400':
+                    description: Invalid credentials
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          status:
+                                              example: 400
+                                          success:
+                                              example: false
+                                          message:
+                                              example: 'Username or password are incorrect'
+
+    /auth/logout:
+        get:
+            tags:
+                - Authentication
+            summary: User logout
+            responses:
+                '200':
+                    description: User logged out successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          message:
+                                              example: 'User logged out successfully'
+
+    /auth/register:
+        post:
+            tags:
+                - Authentication
+            summary: Register new user
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LoginRequest'
+            responses:
+                '201':
+                    description: User registered successfully
+                '400':
+                    description: Username already exists or validation error
+
+tags:
+    - name: Menus
+      description: Menu management operations
+    - name: Opening Hours
+      description: Restaurant opening hours management
+    - name: Events
+      description: Event management operations
+    - name: Authentication
+      description: User authentication operations
