@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { OpeningHoursController } from '../controllers/openingHoursController.js';
 import { fallbackController } from '../services/fallbackService.js';
-import { authenticateUser } from '../middlewares/auth.js';
 
 const router = Router();
 

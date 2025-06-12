@@ -1,16 +1,18 @@
 import express from 'express';
+// Router import
 import menuRouter from './routes/menuRouter.js';
 import openingHoursRouter from './routes/openingHoursRouter.js';
 import eventsRouter from './routes/eventRouter.js';
 import authRouter from './routes/authRouter.js';
+import wineListRouter from './routes/wineListRouter.js';
+// Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import cors from 'cors';
-// Middlewares Import
+// Middlewares import
 import { corsMiddleware } from './middlewares/corsConfig.js';
 import logger from './middlewares/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
-// Swagger imports
+// Swagger import
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
 
@@ -35,6 +37,7 @@ app.use('/api/menus', menuRouter);
 app.use('/api/openingHours', openingHoursRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/wine-list', wineListRouter);
 
 // Felhantering av databas
 database.on('error', (error) => console.log(error));
