@@ -147,6 +147,18 @@ export class WineListController {
 					areaObj = { area: area, items: [] };
 					countryObj.areas.push(areaObj);
 				}
+				const exists = areaObj.items.some((wine) => wine.name === name);
+				if (exists) {
+					return res
+						.status(400)
+						.json(
+							constructResObj(
+								400,
+								'Wine name already exists in this area',
+								false
+							)
+						);
+				}
 				areaObj.items.push(newWine);
 			} else {
 				// Om inget område, lägg vinet i ett område "Övrigt" eller direkt i areas
