@@ -7,7 +7,7 @@ const Schema = mongoose.Schema;
 const WineItemSchema = new Schema(
 	{
 		id: { type: String },
-		active: { type: Boolean, default: true },
+		active: { type: Boolean, required: true, default: true },
 		name: { type: String, required: true, unique: true },
 		price: { type: Schema.Types.Mixed },
 	},
@@ -37,7 +37,6 @@ const WineListSchema = new Schema(
 	{
 		id: { type: String, required: true, unique: true },
 		title: { type: String, required: true }, // T.ex. "Rött"
-		type: { type: String, required: true, unique: true },
 		countries: {
 			type: Map,
 			of: CountrySchema,

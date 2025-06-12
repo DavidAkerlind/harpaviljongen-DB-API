@@ -13,8 +13,17 @@ router.get('/:id', WineListController.getById);
 // Uppdatera ett helt vinblad (skicka in hela objektet)
 router.put('/:id', WineListController.updateWineList);
 
+// Uppdatera ett vin i en vinlista (namn, pris, area, country)
+router.put('/:listId/wine/:wineId', WineListController.updateWine);
+
 // Lägg till nytt vin i en vinlista
 router.post('/:id/wine', WineListController.addWine);
+
+// Toggle active på ett vin i en vinlista
+router.patch(
+	'/:listId/wine/:wineId/toggle',
+	WineListController.toggleWineActive
+);
 
 // ==== FALLBACK ====
 router.use(fallbackController);
