@@ -90,8 +90,6 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/MenuItem'
-                        $ref: '#/components/schemas/MenuItem'
-
                 createdAt:
                     type: string
                     format: date-time
@@ -413,22 +411,21 @@ paths:
                                     - $ref: '#/components/schemas/ApiResponse'
                                     - type: object
                                       properties:
-                                          message: 
-                                            example: 'Found 1 items matching: \"toast\"'
+                                          message:
+                                              example: 'Found 1 items matching: \"toast\"'
                                           data:
                                               type: object
                                               properties:
-                                                menuId:
-                                                    type: string
-                                                    example: 'menu-wine'
-                                                menuTitle:
-                                                    type: string
-                                                    example: 'Wine Menu'
-                                                items:
-                                                    type: array
-                                                    items:
-                                                        $ref: '#/components/schemas/MenuItem'
-                                                        $ref: '#/components/schemas/MenuItem'
+                                                  menuId:
+                                                      type: string
+                                                      example: 'menu-wine'
+                                                  menuTitle:
+                                                      type: string
+                                                      example: 'Wine Menu'
+                                                  items:
+                                                      type: array
+                                                      items:
+                                                          $ref: '#/components/schemas/MenuItem'
 
                 '400':
                     $ref: '#/components/responses/BadRequestError'
@@ -762,7 +759,6 @@ paths:
                                       properties:
                                           message:
                                               example: 'User logged out successfully'
-
     /auth/register:
         post:
             tags:
@@ -779,6 +775,231 @@ paths:
                     description: User registered successfully
                 '400':
                     description: Username already exists or validation error
+    /wine-list:
+        get:
+            tags:
+                - WineList
+            summary: Get all wine lists
+            description: Retrieve all wine lists (e.g. red, white, sparkling)
+            responses:
+                '200':
+                    description: Wine lists retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+
+    /wine-list/{id}:
+        get:
+            tags:
+                - WineList
+            summary: Get wine list by ID
+            description: Retrieve a specific wine list (e.g. "red-wines")
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                  example: red-wines
+            responses:
+                '200':
+                    description: Wine list retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+        put:
+            tags:
+                - WineList
+            summary: Update entire wine list
+            description: Replace all data in a wine list (admin only)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                  example: red-wines
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                id:
+                                    type: string
+                                    example: red-wines
+                                title:
+                                    type: string
+                                    example: Rött
+                                countries:
+                                    type: object
+            responses:
+                '200':
+                    description: Wine list updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /wine-list/{id}/wine:
+        post:
+            tags:
+                - WineList
+            summary: Add new wine to wine list
+            description: Add a new wine to a wine list. Specify country, optional area, name, and price.
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+                  example: red-wines
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - country
+                                - name
+                                - price
+                            properties:
+                                country:
+                                    type: string
+                                    example: italy
+                                area:
+                                    type: string
+                                    example: Piemonte
+                                name:
+                                    type: string
+                                    example: Barolo
+                                price:
+                                    type: number
+                                    example: 450
+            responses:
+                '201':
+                    description: Wine added successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /wine-list/{listId}/wine/{wineId}:
+        put:
+            tags:
+                - WineList
+            summary: Update wine (name, price, country, area)
+            description: Update a wine's name, price, country, or area by its ID.
+            parameters:
+                - in: path
+                  name: listId
+                  required: true
+                  schema:
+                      type: string
+                  example: red-wines
+                - in: path
+                  name: wineId
+                  required: true
+                  schema:
+                      type: string
+                  example: wine-1234567890
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    example: Barolo Superiore
+                                price:
+                                    type: number
+                                    example: 555
+                                country:
+                                    type: string
+                                    example: italy
+                                area:
+                                    type: string
+                                    example: Piemonte
+            responses:
+                '200':
+                    description: Wine updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+        delete:
+            tags:
+                - WineList
+            summary: Delete wine by ID
+            description: Delete a wine from a wine list by its ID.
+            parameters:
+                - in: path
+                  name: listId
+                  required: true
+                  schema:
+                      type: string
+                  example: red-wines
+                - in: path
+                  name: wineId
+                  required: true
+                  schema:
+                      type: string
+                  example: wine-1234567890
+            responses:
+                '200':
+                    description: Wine deleted successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /wine-list/{listId}/wine/{wineId}/toggle:
+        patch:
+            tags:
+                - WineList
+            summary: Toggle active on wine by ID
+            description: Toggle the "active" status of a wine by its ID.
+            parameters:
+                - in: path
+                  name: listId
+                  required: true
+                  schema:
+                      type: string
+                  example: red-wines
+                - in: path
+                  name: wineId
+                  required: true
+                  schema:
+                      type: string
+                  example: wine-1234567890
+            responses:
+                '200':
+                    description: Wine toggled successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ApiResponse'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
 
 tags:
     - name: Menus
@@ -789,3 +1010,5 @@ tags:
       description: Event management operations
     - name: Authentication
       description: User authentication operations
+    - name: WineList
+      description: Wine list management operations
