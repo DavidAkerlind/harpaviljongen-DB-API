@@ -35,8 +35,6 @@ components:
                         - type: object
                         - type: array
                         - type: string
-                        - type: null
-
         MenuItem:
             type: object
             properties:
