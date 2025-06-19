@@ -155,9 +155,8 @@ export class WineListController {
 								false
 							)
 						);
-				} else {
-					areaObj.items.push(newWine);
 				}
+				areaObj.items.push(newWine);
 			} else {
 				// Om inget område, lägg vinet i ett område "other" eller direkt i areas
 				let areaObj = countryObj.areas.find((a) => a.area === 'other');
