@@ -364,4 +364,65 @@ export class WineListController {
 			);
 		}
 	}
+	static async deleteWine(req, res) {
+		try {
+			const { listId, wineId } = req.params;
+			const wineList = await WineList.findOne({ id: listId });
+			if (!wineList) {
+				return res
+					.status(404)
+					.json(
+						constructResObj(
+							404,
+							`Wine list not found with id: ${listId}`,
+							false
+						)
+					);
+			}
+
+			let found = false;
+			let deletedWine = null;
+
+			// Loopa igenom alla länder och områden
+			for (const [, countryObj] of wineList.countries) {
+				for (const areaObj of countryObj.areas) {
+					const wineIndex = areaObj.items.findIndex(
+						(w) => w.id === wineId
+					);
+					if (wineIndex !== -1) {
+						[deletedWine] = areaObj.items.splice(wineIndex, 1);
+						found = true;
+						break;
+					}
+				}
+				if (found) break;
+			}
+
+			if (!found) {
+				return res
+					.status(404)
+					.json(
+						constructResObj(
+							404,
+							`Wine with id: ${wineId} not found`,
+							false
+						)
+					);
+			}
+
+			await wineList.save();
+			res.json(
+				constructResObj(
+					200,
+					`Wine ${wineId} deleted successfully`,
+					true,
+					deletedWine
+				)
+			);
+		} catch (error) {
+			res.status(500).json(
+				constructResObj(500, 'Server error', false, error.message)
+			);
+		}
+	}
 }

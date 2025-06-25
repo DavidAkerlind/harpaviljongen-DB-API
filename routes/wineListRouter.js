@@ -25,6 +25,8 @@ router.patch(
 	WineListController.toggleWineActive
 );
 
+router.delete('/:listId/wine/:wineId', WineListController.deleteWine);
+
 // ==== FALLBACK ====
 router.use(fallbackController);
 
