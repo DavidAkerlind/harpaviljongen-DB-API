@@ -15,7 +15,7 @@ export async function comparePasswords(password, hashedPassword) {
 	return isSame;
 }
 
-export function singToken(payload) {
+export function signToken(payload) {
 	const token = jwt.sign(payload, SECRET, { expiresIn: 60 * 60 });
 	return token;
 }
