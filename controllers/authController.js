@@ -11,12 +11,13 @@ export class AuthController {
 			const { username, password } = req.body;
 			const user = await getUser(username);
 			if (user) {
+				print(user.password);
 				const isSame = comparePasswords(password, user.password);
 				if (isSame) {
 					res.json(
 						constructResObj(
 							200,
-							'User logged in successfully',
+							`User logged in successfully ${password}`,
 							true
 						)
 					);
