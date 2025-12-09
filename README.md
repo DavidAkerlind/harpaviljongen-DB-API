@@ -32,6 +32,10 @@ Backend API for Harpaviljongen restaurant managing:
 -   Production: `https://harpaviljongen-db-api.onrender.com/api`
 -   Development: `http://localhost:7000/api`
 
+### IP Adresses
+
+-   changes via Render
+
 ## API Configuration
 
 ### CORS Configuration
