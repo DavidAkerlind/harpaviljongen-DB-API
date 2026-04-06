@@ -6,12 +6,7 @@ import { authenticateUser } from '../middlewares/auth.js';
 const router = Router();
 
 // POST - Upload a PDF (protected)
-router.post(
-	'/upload',
-	authenticateUser,
-	uploadPdfMiddleware,
-	MenuPdfController.uploadPdf,
-);
+router.post('/upload', uploadPdfMiddleware, MenuPdfController.uploadPdf);
 
 // GET - Fetch active PDF by type (public)
 router.get('/active', MenuPdfController.getActivePdf);
@@ -20,6 +15,6 @@ router.get('/active', MenuPdfController.getActivePdf);
 router.get('/', MenuPdfController.getAllPdfs);
 
 // DELETE - Delete a PDF by id (protected)
-router.delete('/:id', authenticateUser, MenuPdfController.deletePdf);
+router.delete('/:id', MenuPdfController.deletePdf);
 
 export default router;
