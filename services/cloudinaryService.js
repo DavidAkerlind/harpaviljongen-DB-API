@@ -1,6 +1,4 @@
 import { v2 as cloudinary } from 'cloudinary';
-import pkg from 'multer-storage-cloudinary';
-const { CloudinaryStorage } = pkg;
 import multer from 'multer';
 
 cloudinary.config({
@@ -9,19 +7,12 @@ cloudinary.config({
 	api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = new CloudinaryStorage({
-	cloudinary,
-	params: {
-		folder: 'harpaviljongen/menus',
-		resource_type: 'raw',
-		allowed_formats: ['pdf'],
-	},
-});
+const storage = multer.memoryStorage();
 
-export const uploadPdfMiddleware = multer({
+const uploadPdfMiddleware = multer({
 	storage,
-	limits: { fileSize: 10 * 1024 * 1024 },
-	fileFilter: (_req, file, cb) => {
+	limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+	fileFilter: (req, file, cb) => {
 		if (file.mimetype === 'application/pdf') {
 			cb(null, true);
 		} else {
@@ -30,4 +21,22 @@ export const uploadPdfMiddleware = multer({
 	},
 }).single('file');
 
-export { cloudinary };
+const uploadToCloudinary = (buffer, filename) => {
+	return new Promise((resolve, reject) => {
+		const stream = cloudinary.uploader.upload_stream(
+			{
+				resource_type: 'raw',
+				folder: 'menu-pdfs',
+				public_id: filename,
+				format: 'pdf',
+			},
+			(error, result) => {
+				if (error) reject(error);
+				else resolve(result);
+			},
+		);
+		stream.end(buffer);
+	});
+};
+
+export { cloudinary, uploadPdfMiddleware, uploadToCloudinary };
