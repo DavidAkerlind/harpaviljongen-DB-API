@@ -25,7 +25,7 @@ const uploadToCloudinary = (buffer, filename) => {
 	return new Promise((resolve, reject) => {
 		const stream = cloudinary.uploader.upload_stream(
 			{
-				resource_type: 'raw',
+				resource_type: 'image',
 				folder: 'menu-pdfs',
 				public_id: filename,
 				format: 'pdf',
