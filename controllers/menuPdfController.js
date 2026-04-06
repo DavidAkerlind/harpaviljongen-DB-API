@@ -1,5 +1,8 @@
+import {
+	cloudinary,
+	uploadToCloudinary,
+} from '../services/cloudinaryService.js';
 import MenuPdf from '../models/MenuPdf.js';
-import { cloudinary } from '../services/cloudinaryService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 
 export class MenuPdfController {
@@ -14,9 +17,6 @@ export class MenuPdfController {
 			const { type } = req.body;
 
 			if (!type) {
-				await cloudinary.uploader.destroy(req.file.filename, {
-					resource_type: 'raw',
-				});
 				return res
 					.status(400)
 					.json(constructResObj(400, 'Menu type is required', false));
@@ -24,9 +24,6 @@ export class MenuPdfController {
 
 			const validTypes = ['food', 'wine', 'lunch', 'drinks'];
 			if (!validTypes.includes(type)) {
-				await cloudinary.uploader.destroy(req.file.filename, {
-					resource_type: 'raw',
-				});
 				return res
 					.status(400)
 					.json(
@@ -38,6 +35,9 @@ export class MenuPdfController {
 					);
 			}
 
+			const filename = `${type}-${Date.now()}`;
+			const result = await uploadToCloudinary(req.file.buffer, filename);
+
 			await MenuPdf.updateMany(
 				{ type, isActive: true },
 				{ isActive: false },
@@ -45,8 +45,8 @@ export class MenuPdfController {
 
 			const newPdf = await MenuPdf.create({
 				type,
-				url: req.file.path,
-				publicId: req.file.filename,
+				url: result.secure_url,
+				publicId: result.public_id,
 				isActive: true,
 			});
 

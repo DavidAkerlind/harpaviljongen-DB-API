@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { MenuPdfController } from '../controllers/menuPdfController.js';
 import { uploadPdfMiddleware } from '../services/cloudinaryService.js';
-import { authenticateUser } from '../middlewares/auth.js';
 
 const router = Router();
 
