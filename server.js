@@ -5,6 +5,7 @@ import openingHoursRouter from './routes/openingHoursRouter.js';
 import eventsRouter from './routes/eventRouter.js';
 import authRouter from './routes/authRouter.js';
 import wineListRouter from './routes/wineListRouter.js';
+import menuPdfRouter from './routes/menuPdfRoutes.js';
 // Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -38,6 +39,7 @@ app.use('/api/openingHours', openingHoursRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/wine-list', wineListRouter);
+app.use('/api/menu-pdfs', menuPdfRouter);
 
 // Felhantering av databas
 database.on('error', (error) => console.log(error));
