@@ -2,6 +2,7 @@ import cors from 'cors';
 
 export const allowedOrigins = [
 	'https://www.harpaviljongen.com', // Production URL
+	'https://harpaviljongen.pages.dev', // Cloudflare Pages URL
 	'http://localhost:7000', // Local dev URL
 	'http://localhost:5173', // Local dev URL
 	'http://localhost:5174', // Local dev URL
