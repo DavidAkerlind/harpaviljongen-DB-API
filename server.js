@@ -27,7 +27,7 @@ const swaggerDocs = YAML.load('./docs/docs.yml');
 
 // Middlewares
 app.use(corsMiddleware);
-app.options('*', corsMiddleware); // handle preflight for all routes
+app.options('/{*path}', corsMiddleware); // handle preflight for all routes (Express 5 syntax)
 app.use(express.json());
 app.use(logger);
 
