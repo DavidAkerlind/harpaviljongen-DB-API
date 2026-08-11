@@ -1,4 +1,8 @@
 export default function errorHandler(error, req, res, next) {
 	console.log(error);
-	res.status(error.status).json({ success: false, message: error.message });
+	const statusCode = typeof error.status === 'number' ? error.status : 500;
+	res.status(statusCode).json({
+		success: false,
+		message: error.message || 'Internal server error',
+	});
 }

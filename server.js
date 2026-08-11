@@ -26,8 +26,9 @@ const database = mongoose.connection;
 const swaggerDocs = YAML.load('./docs/docs.yml');
 
 // Middlewares
-app.use(express.json());
 app.use(corsMiddleware);
+app.options('*', corsMiddleware); // handle preflight for all routes
+app.use(express.json());
 app.use(logger);
 
 // Swagger Documentation Route
