@@ -1,4 +1,6 @@
-import Activity from '../models/activity.js';
+import mongoose from 'mongoose';
+import Activity, { ACTIVITY_CATEGORIES } from '../models/activity.js';
+import User from '../models/user.js';
 
 // Called after a successful change. A failed log entry never fails the change itself.
 export async function logActivity(req, type, details = {}) {
@@ -15,6 +17,83 @@ export async function logActivity(req, type, details = {}) {
 	}
 }
 
-export async function listActivity(limit) {
-	return Activity.find().sort({ createdAt: -1 }).limit(limit);
+// Current name and picture of the people behind the entries. Someone who has been
+// deleted keeps the username saved in the entry.
+async function withUsers(entries) {
+	const ids = [...new Set(entries.map((e) => e.userId).filter(Boolean))];
+	const users = await User.find({ userId: { $in: ids } });
+	const byId = new Map(users.map((u) => [u.userId, u]));
+	return entries.map((entry) => {
+		const user = byId.get(entry.userId);
+		return {
+			...entry.toJSON(),
+			user: {
+				name: user ? user.name || user.username : entry.username,
+				avatarUrl: user?.avatar?.url || null,
+				deleted: !user,
+			},
+		};
+	});
 }
+
+// filters: { from, to (Dates, to is exclusive), category, userId, before (entry id) }
+export async function listActivity({ limit, before, from, to, category, userId }) {
+	const filter = {};
+	if (from || to) {
+		filter.createdAt = {};
+		if (from) filter.createdAt.$gte = from;
+		if (to) filter.createdAt.$lt = to;
+	}
+	if (category) filter.type = { $regex: `^${ACTIVITY_CATEGORIES[category]}\\.` };
+	if (userId) filter.userId = userId;
+
+	const [total, page] = await Promise.all([
+		Activity.countDocuments(filter),
+		Activity.find(before ? { ...filter, _id: { $lt: before } } : filter)
+			.sort({ _id: -1 })
+			.limit(limit + 1), // one extra tells whether there are more
+	]);
+
+	return {
+		items: await withUsers(page.slice(0, limit)),
+		total,
+		hasMore: page.length > limit,
+	};
+}
+
+// Everyone who appears in the log, for the user filter
+export async function listActivityUsers() {
+	const seen = await Activity.aggregate([
+		{ $sort: { _id: -1 } },
+		{ $group: { _id: '$userId', username: { $first: '$username' } } },
+	]);
+	const users = await User.find({ userId: { $in: seen.map((s) => s._id) } });
+	const byId = new Map(users.map((u) => [u.userId, u]));
+	return seen
+		.filter((s) => s._id)
+		.map((s) => {
+			const user = byId.get(s._id);
+			return {
+				userId: s._id,
+				name: user ? user.name || user.username : s.username,
+				avatarUrl: user?.avatar?.url || null,
+				deleted: !user,
+			};
+		})
+		.sort((a, b) => a.name.localeCompare(b.name, 'sv'));
+}
+
+// The log used to be deleted after 180 days (a TTL index on createdAt). Remove that
+// index if it's there so entries are kept, then create the normal indexes.
+export async function ensureActivityIndexes() {
+	const indexes = await Activity.collection.indexes().catch(() => []);
+	for (const index of indexes) {
+		if (index.expireAfterSeconds !== undefined) {
+			await Activity.collection.dropIndex(index.name);
+			console.log(`Activity log: removed the auto-delete index ${index.name}`);
+		}
+	}
+	await Activity.createIndexes();
+}
+
+export const isActivityId = (id) => mongoose.isValidObjectId(id);

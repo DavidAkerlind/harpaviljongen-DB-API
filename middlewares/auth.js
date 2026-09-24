@@ -25,6 +25,7 @@ export async function authenticateUser(req, res, next) {
 	}
 
 	req.user = { userId: user.userId, username: user.username, role: user.role };
+	req.userDoc = user;
 	next();
 }
 

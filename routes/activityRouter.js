@@ -8,8 +8,11 @@ const router = Router();
 // Shows usernames, so only for logged-in users (admin and employee)
 router.use(authenticateUser);
 
-// GET – senaste ändringarna, ?limit=20
+// GET – ändringar, nyast först. ?limit=20&from=&to=&category=&userId=&before=
 router.get('/', ActivityController.listActivity);
+
+// GET – alla som finns i loggen (för filtret)
+router.get('/users', ActivityController.listUsers);
 
 // ==== FALLBACK ====
 router.use(fallbackController);

@@ -31,6 +31,17 @@ const userSchema = new Schema(
 			enum: USER_ROLES,
 			required: true,
 		},
+		// Shown in the admin instead of the username when set, e.g. "Anna Svensson"
+		name: {
+			type: String,
+			trim: true,
+			maxlength: 50,
+		},
+		// Profile picture in Cloudinary
+		avatar: {
+			url: String,
+			publicId: String,
+		},
 		// Goes up by one on every password change. A token carries the version it was
 		// signed with and stops working when they no longer match (see middlewares/auth.js).
 		tokenVersion: {
@@ -44,6 +55,8 @@ const userSchema = new Schema(
 			transform: (doc, ret) => ({
 				userId: ret.userId,
 				username: ret.username,
+				name: ret.name || null,
+				avatarUrl: ret.avatar?.url || null,
 				role: ret.role,
 				createdAt: ret.createdAt ?? null,
 			}),

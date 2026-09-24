@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import User, { USER_ROLES } from '../models/user.js';
+import { deleteFromCloudinary } from './cloudinaryService.js';
 
 // "Anna" and "anna" count as the same username
 const CASE_INSENSITIVE = { locale: 'sv', strength: 2 };
@@ -41,6 +42,16 @@ export async function updateUserRole(userId, role) {
 
 export async function deleteUser(userId) {
 	return User.findOneAndDelete({ userId });
+}
+
+// Deletes the old picture in Cloudinary without failing the request if that doesn't work
+export async function removeAvatarFile(user) {
+	if (!user.avatar?.publicId) return;
+	try {
+		await deleteFromCloudinary(user.avatar.publicId, 'image');
+	} catch (error) {
+		console.log('Could not delete profile picture:', error.message);
+	}
 }
 
 // password must already be hashed. Logs the user out everywhere.

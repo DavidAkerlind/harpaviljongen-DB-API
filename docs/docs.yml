@@ -194,6 +194,15 @@ components:
                 username:
                     type: string
                     example: 'anna'
+                name:
+                    type: string
+                    nullable: true
+                    description: Display name, shown instead of the username when set
+                    example: 'Anna Svensson'
+                avatarUrl:
+                    type: string
+                    nullable: true
+                    description: Profile picture (square JPG in Cloudinary)
                 role:
                     type: string
                     enum: [admin, employee]
@@ -357,10 +366,23 @@ components:
 
         Activity:
             type: object
-            description: One entry in "Senaste ändringar". Kept for 180 days.
+            description: One entry in the change log. Kept for good.
             properties:
                 id:
                     type: string
+                userId:
+                    type: string
+                user:
+                    type: object
+                    description: The person's current name and picture (the saved username if they have been deleted)
+                    properties:
+                        name:
+                            type: string
+                        avatarUrl:
+                            type: string
+                            nullable: true
+                        deleted:
+                            type: boolean
                 type:
                     type: string
                     enum:
@@ -375,6 +397,9 @@ components:
                         - user.role
                         - user.password
                         - user.delete
+                        - account.update
+                        - account.avatar
+                        - account.password
                     example: pdf.upload
                 username:
                     type: string
@@ -388,6 +413,9 @@ components:
                         - openingHours.update: `{ days: ['Fredag'] }` (only days that changed)
                         - pages.update: `{ changes: [{ page, placement, value }] }`
                         - user.*: `{ username }`, plus `role` (create, role)
+                        - account.update: `{ username?: { from, to }, name?: { from, to } }`
+                        - account.avatar: `{ action: added | changed | removed }`
+                        - account.password: `{}`
                     example: { pdfType: food, title: 'Höstmeny 2026', activated: true }
                 createdAt:
                     type: string
@@ -970,12 +998,80 @@ paths:
             tags:
                 - Authentication
             summary: Check that a token is still valid
-            description: Returns `{ user: { userId, username, role } }`. Also 401 if the account has been deleted.
+            description: Returns `{ user: { userId, username, name, avatarUrl, role, createdAt } }`. Also 401 if the account has been deleted.
             responses:
                 '200':
                     description: Token is valid
                 '401':
                     description: Missing, invalid or expired token
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Change your own username and/or display name
+            description: Send only what you want to change. You stay logged in. `name` null or empty removes it.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                username:
+                                    type: string
+                                    minLength: 3
+                                    maxLength: 30
+                                    example: 'anna.s'
+                                name:
+                                    type: string
+                                    nullable: true
+                                    maxLength: 50
+                                    example: 'Anna Svensson'
+            responses:
+                '200':
+                    description: 'data: { user }'
+                '400':
+                    description: Invalid username or name too long
+                '409':
+                    description: Username already exists
+
+    /auth/avatar:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Upload your profile picture
+            description: Stored as a square JPG (max 512 px). Replaces the old one.
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required: [file]
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+                                    description: JPG, PNG or WebP, max 5 MB
+            responses:
+                '200':
+                    description: 'data: { user } with the new avatarUrl'
+                '400':
+                    description: Not a JPG, PNG or WebP image
+                '413':
+                    description: Larger than 5 MB
+        delete:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Remove your profile picture
+            responses:
+                '200':
+                    description: 'data: { user }'
 
     /auth/password:
         put:
@@ -1597,7 +1693,7 @@ paths:
                 - bearerAuth: []
             tags:
                 - Site
-            summary: Latest changes, newest first (logged-in users)
+            summary: The change log, newest first, with filters (logged-in users)
             parameters:
                 - in: query
                   name: limit
@@ -1606,9 +1702,36 @@ paths:
                       default: 20
                       minimum: 1
                       maximum: 100
+                - in: query
+                  name: from
+                  description: Only changes at or after this time (ISO date)
+                  schema:
+                      type: string
+                      format: date-time
+                - in: query
+                  name: to
+                  description: Only changes before this time (ISO date, exclusive)
+                  schema:
+                      type: string
+                      format: date-time
+                - in: query
+                  name: category
+                  schema:
+                      type: string
+                      enum: [menus, openingHours, pages, users, account]
+                - in: query
+                  name: userId
+                  description: Only changes made by this user
+                  schema:
+                      type: string
+                - in: query
+                  name: before
+                  description: Id of the last entry you have, for the next page
+                  schema:
+                      type: string
             responses:
                 '200':
-                    description: Latest changes
+                    description: 'data: { items, total (matching the filters), hasMore }'
                     content:
                         application/json:
                             schema:
@@ -1617,9 +1740,31 @@ paths:
                                     - type: object
                                       properties:
                                           data:
-                                              type: array
-                                              items:
-                                                  $ref: '#/components/schemas/Activity'
+                                              type: object
+                                              properties:
+                                                  items:
+                                                      type: array
+                                                      items:
+                                                          $ref: '#/components/schemas/Activity'
+                                                  total:
+                                                      type: integer
+                                                  hasMore:
+                                                      type: boolean
+                '400':
+                    description: Bad date, category or before
+                '401':
+                    description: Missing or invalid token
+
+    /activity/users:
+        get:
+            security:
+                - bearerAuth: []
+            tags:
+                - Site
+            summary: Everyone who appears in the change log (for the user filter)
+            responses:
+                '200':
+                    description: '[{ userId, name, avatarUrl, deleted }], sorted by name'
                 '401':
                     description: Missing or invalid token
 

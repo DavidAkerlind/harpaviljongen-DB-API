@@ -1,4 +1,14 @@
-import { getUser, getUserById, setPassword } from '../services/userService.js';
+import {
+	getUser,
+	getUserById,
+	removeAvatarFile,
+	setPassword,
+} from '../services/userService.js';
+import {
+	isImageBuffer,
+	uploadAvatarToCloudinary,
+} from '../services/cloudinaryService.js';
+import { logActivity } from '../services/activityService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 import {
 	comparePasswords,
@@ -6,7 +16,12 @@ import {
 	isAuthConfigured,
 	signToken,
 } from '../utils/authUtil.js';
-import { passwordProblem } from '../utils/userValidation.js';
+import { passwordProblem, usernameProblem } from '../utils/userValidation.js';
+
+const MAX_NAME = 50;
+
+const fail = (res, status, message) =>
+	res.status(status).json(constructResObj(status, message, false));
 
 const tokenPayload = (user) => ({
 	userId: user.userId,
@@ -14,11 +29,8 @@ const tokenPayload = (user) => ({
 	v: user.tokenVersion ?? 0,
 });
 
-const publicUser = (user) => ({
-	userId: user.userId,
-	username: user.username,
-	role: user.role,
-});
+// { userId, username, name, avatarUrl, role, createdAt }
+const publicUser = (user) => user.toJSON();
 
 export class AuthController {
 	static async login(req, res, next) {
@@ -69,7 +81,7 @@ export class AuthController {
 	static async me(req, res) {
 		res.json(
 			constructResObj(200, 'Token is valid', true, {
-				user: publicUser(req.user),
+				user: publicUser(req.userDoc),
 			})
 		);
 	}
@@ -98,10 +110,101 @@ export class AuthController {
 		}
 
 		await setPassword(user, await hashPassword(newPassword));
+		await logActivity(req, 'account.password');
 		const token = signToken(tokenPayload(user));
 		res.json(
 			constructResObj(200, 'Password changed successfully', true, {
 				token,
+				user: publicUser(user),
+			})
+		);
+	}
+
+	// PATCH /api/auth/me { username?, name? } – your own username and display name.
+	// Your login keeps working; tokens are tied to the account, not the username.
+	static async updateMe(req, res) {
+		const user = req.userDoc;
+		const { username, name } = req.body ?? {};
+		const changes = {};
+
+		if (username !== undefined) {
+			const wanted = typeof username === 'string' ? username.trim() : '';
+			// Sending the same username again is fine, even if it's from before the current rules
+			if (wanted !== user.username) {
+				const problem = usernameProblem(wanted);
+				if (problem) return fail(res, 400, problem);
+				const taken = await getUser(wanted);
+				if (taken && taken.userId !== user.userId) {
+					return fail(res, 409, 'Username already exists');
+				}
+				changes.username = { from: user.username, to: wanted };
+				user.username = wanted;
+			}
+		}
+
+		if (name !== undefined) {
+			if (name !== null && typeof name !== 'string') {
+				return fail(res, 400, 'name must be a string or null');
+			}
+			const wanted = (name ?? '').trim();
+			if (wanted.length > MAX_NAME) {
+				return fail(res, 400, `Name can be at most ${MAX_NAME} characters`);
+			}
+			if (wanted !== (user.name ?? '')) {
+				changes.name = { from: user.name || null, to: wanted || null };
+				user.name = wanted || undefined;
+			}
+		}
+
+		if (Object.keys(changes).length) {
+			await user.save();
+			await logActivity(req, 'account.update', changes);
+		}
+		res.json(
+			constructResObj(200, 'Profile updated successfully', true, {
+				user: publicUser(user),
+			})
+		);
+	}
+
+	// PUT /api/auth/avatar – multipart "file": JPG, PNG or WebP, max 5 MB
+	static async uploadAvatar(req, res) {
+		if (!req.file) return fail(res, 400, 'No file uploaded');
+		if (!isImageBuffer(req.file.buffer)) {
+			return fail(res, 400, 'The file is not a JPG, PNG or WebP image');
+		}
+
+		const user = req.userDoc;
+		const hadAvatar = Boolean(user.avatar?.url);
+		const result = await uploadAvatarToCloudinary(
+			req.file.buffer,
+			`${user.userId}-${Date.now()}`
+		);
+		await removeAvatarFile(user);
+		user.avatar = { url: result.secure_url, publicId: result.public_id };
+		await user.save();
+		await logActivity(req, 'account.avatar', {
+			action: hadAvatar ? 'changed' : 'added',
+		});
+
+		res.json(
+			constructResObj(200, 'Profile picture saved', true, {
+				user: publicUser(user),
+			})
+		);
+	}
+
+	// DELETE /api/auth/avatar
+	static async deleteAvatar(req, res) {
+		const user = req.userDoc;
+		if (user.avatar?.url) {
+			await removeAvatarFile(user);
+			user.avatar = undefined;
+			await user.save();
+			await logActivity(req, 'account.avatar', { action: 'removed' });
+		}
+		res.json(
+			constructResObj(200, 'Profile picture removed', true, {
 				user: publicUser(user),
 			})
 		);
