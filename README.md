@@ -290,6 +290,19 @@ GET /api/auth/me          (needs token)
 Response: ApiResponse<{ user: { userId: string, username: string, role: "admin" | "employee" } }>
 ```
 
+#### Your own profile
+
+```http
+PATCH  /api/auth/me       (needs token) { "username"?: string, "name"?: string | null }   // only what changes
+PUT    /api/auth/avatar   (needs token) multipart "file": JPG, PNG or WebP, max 5 MB
+DELETE /api/auth/avatar   (needs token)
+Response: ApiResponse<{ user: { userId, username, name, avatarUrl, role, createdAt } }>
+```
+
+- `username`: same rules as for new users (409 if taken). You stay logged in; tokens belong to the account, not the name.
+- `name`: display name shown in the admin instead of the username, max 50 characters. `null` or `""` removes it.
+- The picture is stored as a square 512 px JPG in Cloudinary (`CLOUDINARY_AVATAR_FOLDER`, default `admin-avatars`). A new picture replaces and deletes the old one; deleting a user deletes their picture.
+
 #### Change your own password
 
 ```http
@@ -430,14 +443,20 @@ GET /api/health                           API and database status
 
 Pages: `chambre`, `events`, `gallery`. Placements: `navbar`, `home`. Only the values you send change.
 
-### Latest changes (Senaste ändringar)
+### Change log (Senaste ändringar / Alla ändringar)
 
 ```http
-GET /api/activity?limit=20                (token, any role) newest first, max 100
-Response: ApiResponse<Array<{ id, type, username, details, createdAt }>>
+GET /api/activity?limit=20&from=&to=&category=&userId=&before=   (token, any role)
+Response: ApiResponse<{ items: Activity[], total: number, hasMore: boolean }>
+GET /api/activity/users                                          (token) everyone in the log
 ```
 
-Written automatically after each change made through the admin: PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), and users created, role changed, new password, deleted. Entries are removed after 180 days.
+- Newest first, max 100 per page. `before` = id of the last entry you have, for the next page.
+- `from` / `to`: ISO dates (`to` is exclusive). The admin sends midnight in the browser's time zone.
+- `category`: `menus`, `openingHours`, `pages`, `users`, `account`. `userId`: changes by one person.
+- `total` counts everything matching the filters. Each entry has `user: { name, avatarUrl, deleted }` with the person's current name and picture.
+
+Written automatically after each change made through the admin: PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), users created/role/new password/deleted, and your own username, name, picture and password. Entries are kept for good (a few hundred bytes each).
 
 ### Opening Hours: whole week
 
@@ -495,9 +514,10 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=menu-pdfs
+CLOUDINARY_AVATAR_FOLDER=admin-avatars
 ```
 
-Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).
+Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`, `CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).
 
 ### Installation
 
