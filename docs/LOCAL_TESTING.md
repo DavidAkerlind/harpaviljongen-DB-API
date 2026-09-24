@@ -93,9 +93,9 @@ You should see `DB Connected` and `Server is running on port 7000`. Check:
 | **2. Öppettider** | `Update whole week` → 200 and all seven days back, Monday first. Empty `from`/`to` = closed. |
 | **3. Sidor** | `Update page settings` → 200. Only the values you send change. |
 | **4. Meny- & vinlista-PDF:er** | `Upload PDF`: in the **Body** tab click *Select files* on the `file` row and pick a PDF. `type`: `food` = Meny, `wine` = Vinlista. The new id is saved as `{{pdfId}}` for *Activate*, *Deactivate* and *Delete*. |
-| **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). |
+| **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). `Senaste ändringar` lists who changed what. |
 | **6. Security checks** | All should return **401**. They prove that nobody can change anything without logging in. |
-| **7. Användare (bara admin)** | Needs an **admin** login. Creates a temporary employee, logs in as it, checks that it gets **403** on users but can change content, makes it admin and back, deletes it, and checks that its token stops working (**401**). Run the folder as a whole (it passes values between requests). |
+| **7. Användare (bara admin)** | Needs an **admin** login. Creates a temporary employee, logs in as it, checks that it gets **403** on users but can change content, changes its own password, gets a new password from the admin (old tokens → **401**), makes it admin and back, deletes it, and checks that its token stops working (**401**). Run the folder as a whole (it passes values between requests). It never touches your own password. |
 
 You can also run everything at once: click the collection → **Run** (pick a PDF for the upload row first).
 
@@ -158,6 +158,10 @@ Keep the admin and the website open side by side. After a change in the admin, *
 | **⋮ → Ta bort** on an admin | Greyed out: only *Personal* can be deleted. Make them personal first. |
 | **⋮ → Ta bort** on Anna (as personal) | She disappears, and her open window is logged out on her next change. |
 | Your own row | Has no **⋮**: you can't change your own role or delete yourself. |
+| **⋮ → Nytt lösenord** on Anna | Her open window is logged out on her next click; she logs in with the new password. |
+| Your name at the bottom of the sidebar → **Byt lösenord** (phone: your initial top right) | A wrong current password says *Nuvarande lösenord stämmer inte.* After a successful change you stay logged in here; another browser logged in as you is logged out. |
+| **Menyer**: the pencil next to a PDF's name | Rename it. The new name shows right away. |
+| **Översikt → Senaste ändringar** | Everything above is listed with who did it (*Du* for you). *Visa fler* shows up to 30. |
 | Stop the API (Ctrl+C) and reload the website | Navbar and buttons still work with the last settings it saw (the opening hours in the footer show an error until the API is back — same as today). |
 
 Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar, and *Användare* and *Logga ut* are behind your initial top right.

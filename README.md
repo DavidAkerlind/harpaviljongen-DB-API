@@ -290,6 +290,16 @@ GET /api/auth/me          (needs token)
 Response: ApiResponse<{ user: { userId: string, username: string, role: "admin" | "employee" } }>
 ```
 
+#### Change your own password
+
+```http
+PUT /api/auth/password    (needs token)
+Body: { "currentPassword": string, "newPassword": string }   // new: 8–72 characters
+Response: ApiResponse<{ token: string, user: {...} }>
+```
+
+The response has a new token for this device; all other tokens for the account stop working. A wrong current password gives 400 and counts towards the login limit.
+
 #### Logout
 
 ```http
@@ -303,6 +313,7 @@ Response: ApiResponse<null>
 GET    /api/users                  (admin) List users, admins first. Never includes passwords.
 POST   /api/users                  (admin) { "username": "anna", "password": "min-8-chars", "role": "employee" }
 PATCH  /api/users/{userId}         (admin) { "role": "admin" }  – not your own role
+PUT    /api/users/{userId}/password (admin) { "password": "min-8-chars" } – not your own; they are logged out everywhere
 DELETE /api/users/{userId}         (admin) Only employees, not yourself
 ```
 
@@ -315,6 +326,7 @@ DELETE /api/users/{userId}         (admin) Only employees, not yourself
 - You can't change your own role or delete yourself, so there is always at least one admin.
 - To remove an admin, change the role to `employee` first.
 - Every token is checked against the database, so a deleted user is locked out right away and a role change applies immediately.
+- A token carries a version number that goes up on every password change, so old tokens stop working as soon as a password is changed.
 - Users from before roles existed get `admin` when the API starts.
 
 ### User Model
@@ -325,6 +337,7 @@ interface User {
 	username: string; // Unique (not case sensitive), 3–30 chars
 	password: string; // bcrypt hash, never returned
 	role: 'admin' | 'employee';
+	tokenVersion: number; // +1 on every password change
 	createdAt: Date; // null for users created before roles existed
 }
 ```
@@ -402,6 +415,7 @@ GET    /api/menu-pdfs/active?type=food    The active PDF (404 if none)
 POST   /api/menu-pdfs/upload              (token) multipart: file, type, title?, activate?
 PATCH  /api/menu-pdfs/{id}/activate       (token) Show on the website; the previous one of that type is turned off
 PATCH  /api/menu-pdfs/{id}/deactivate     (token) Website falls back to its placeholder PDF
+PATCH  /api/menu-pdfs/{id}                (token) { "title": "Höstmeny 2026" } rename (1–100 characters)
 DELETE /api/menu-pdfs/{id}                (token) Also deletes the file in Cloudinary
 ```
 
@@ -415,6 +429,15 @@ GET /api/health                           API and database status
 ```
 
 Pages: `chambre`, `events`, `gallery`. Placements: `navbar`, `home`. Only the values you send change.
+
+### Latest changes (Senaste ändringar)
+
+```http
+GET /api/activity?limit=20                (token, any role) newest first, max 100
+Response: ApiResponse<Array<{ id, type, username, details, createdAt }>>
+```
+
+Written automatically after each change made through the admin: PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), and users created, role changed, new password, deleted. Entries are removed after 180 days.
 
 ### Opening Hours: whole week
 
@@ -432,6 +455,7 @@ Empty `from` and `to` = closed.
 - 201: Created
 - 400: Bad Request
 - 401: Missing, invalid or expired token / wrong login / deleted account
+- 401 also when the password was changed after the token was issued
 - 403: Logged in, but the role isn't allowed (e.g. an employee on `/api/users`)
 - 404: Not Found
 - 409: Username already exists
