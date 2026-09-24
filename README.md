@@ -2,9 +2,9 @@
 
 ## You can find the docs [here](https://harpaviljongen-db-api.onrender.com/api/docs/)
 
--   **Testing locally (API + admin + website, Postman):** [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)
--   **Going live with the new admin (Render, Cloudflare, Loopia, Cloudinary):** [docs/GO_LIVE.md](docs/GO_LIVE.md)
--   **Postman:** import the collection and environments in [docs/](docs/)
+- **Testing locally (API + admin + website, Postman):** [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)
+- **Going live with the new admin (Render, Cloudflare, Loopia, Cloudinary):** [docs/GO_LIVE.md](docs/GO_LIVE.md)
+- **Postman:** import the collection and environments in [docs/](docs/)
 
 ## Table of Contents
 
@@ -27,20 +27,20 @@
 
 Backend API for Harpaviljongen restaurant managing:
 
--   Menus (food, drinks, wine)
--   Opening hours
--   Events and activities
--   Menu PDFs (Meny and Vinlista shown on the website)
--   Site settings (which pages are shown in the navbar and on the homepage)
+- Menus (food, drinks, wine)
+- Opening hours
+- Events and activities
+- Menu PDFs (Meny and Vinlista shown on the website)
+- Site settings (which pages are shown in the navbar and on the homepage)
 
 ### Base URLs
 
--   Production: `https://harpaviljongen-db-api.onrender.com/api`
--   Development: `http://localhost:7000/api`
+- Production: `https://harpaviljongen-db-api.onrender.com/api`
+- Development: `http://localhost:7000/api`
 
 ### IP Adresses
 
--   changes via Render
+- changes via Render
 
 ## API Configuration
 
@@ -61,8 +61,8 @@ const allowedOrigins = [
 	'http://localhost:5173', // website (npm run dev)
 	'http://localhost:5174', // admin (npm run dev)
 	// + other local ports, and Cloudflare Pages previews:
-	'https://*.harpaviljongen.pages.dev', 
-	'https://*.harpaviljongen-admin.pages.dev'
+	'https://*.harpaviljongen.pages.dev',
+	'https://*.harpaviljongen-admin-service.pages.dev',
 ];
 ```
 
@@ -405,14 +405,14 @@ Empty `from` and `to` = closed.
 
 ### HTTP Status Codes
 
--   200: Success
--   201: Created
--   400: Bad Request
--   401: Missing, invalid or expired token / wrong login
--   404: Not Found
--   413: PDF larger than 10 MB
--   429: Too many login attempts
--   500: Server Error
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Missing, invalid or expired token / wrong login
+- 404: Not Found
+- 413: PDF larger than 10 MB
+- 429: Too many login attempts
+- 500: Server Error
 
 ### Error Response Example
 
@@ -428,10 +428,10 @@ Empty `from` and `to` = closed.
 
 ### What you need
 
--   Node.js 18+
--   MongoDB 5+
--   npm or yarn
--   Valid user credentials for authenticated routes
+- Node.js 18+
+- MongoDB 5+
+- npm or yarn
+- Valid user credentials for authenticated routes
 
 ### Environment Variables
 
