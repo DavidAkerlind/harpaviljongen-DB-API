@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { OpeningHoursController } from '../controllers/openingHoursController.js';
 import { fallbackController } from '../services/fallbackService.js';
+import { protectWrites } from '../middlewares/auth.js';
 
 const router = Router();
 
-/* router.use(authenticateUser);*/
+// Reads are public, everything else needs a login token
+router.use(protectWrites);
 
 // ==== GET ====
 router.get('/', OpeningHoursController.getAllOpeningHours);
@@ -21,6 +23,13 @@ router.post('/', OpeningHoursController.createOpeningHours);
 */
 
 // PUT routes
+router.put('/', OpeningHoursController.updateAllOpeningHours);
+/*{
+    "days": [
+        { "day": "Måndag", "hours": { "from": "", "to": "" } },
+        { "day": "Torsdag", "hours": { "from": "17:00", "to": "00:00" } }
+    ]
+*/
 router.put('/:dayId', OpeningHoursController.updateOpeningHours);
 router.put('/day/:day', OpeningHoursController.updateOpeningHoursByDay);
 /*{

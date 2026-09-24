@@ -2,6 +2,10 @@
 
 ## You can find the docs [here](https://harpaviljongen-db-api.onrender.com/api/docs/)
 
+-   **Testing locally (API + admin + website, Postman):** [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md)
+-   **Going live with the new admin (Render, Cloudflare, Loopia, Cloudinary):** [docs/GO_LIVE.md](docs/GO_LIVE.md)
+-   **Postman:** import the collection and environments in [docs/](docs/)
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -26,6 +30,8 @@ Backend API for Harpaviljongen restaurant managing:
 -   Menus (food, drinks, wine)
 -   Opening hours
 -   Events and activities
+-   Menu PDFs (Meny and Vinlista shown on the website)
+-   Site settings (which pages are shown in the navbar and on the homepage)
 
 ### Base URLs
 
@@ -47,10 +53,15 @@ interface CorsConfig {
 }
 
 const allowedOrigins = [
-	'https://www.davidakerlind.com',
-	'http://localhost:7000',
-	'http://localhost:5173',
-	'https://davidakerlind.github.io',
+	'https://harpaviljongen.com',
+	'https://www.harpaviljongen.com',
+	'https://harpaviljongen.pages.dev',
+	'https://admin.harpaviljongen.com',
+	'https://davidakerlind.github.io', // old admin
+	'http://localhost:5173', // website (npm run dev)
+	'http://localhost:5174', // admin (npm run dev)
+	// + other local ports, and Cloudflare Pages previews:
+	// https://*.harpaviljongen.pages.dev, https://*.harpaviljongen-admin.pages.dev
 ];
 ```
 
@@ -261,10 +272,20 @@ Body: {
     "username": string,  // Minimum 6 characters
     "password": string   // Minimum 8 characters
 }
-Response: {
-    "success": boolean,
-    "message": string
-}
+Response: ApiResponse<{ token: string, user: { username: string } }>
+```
+
+Send the token on every POST/PUT/PATCH/DELETE:
+
+```http
+Authorization: Bearer <token>
+```
+
+#### Check token
+
+```http
+GET /api/auth/me          (needs token)
+Response: ApiResponse<{ user: { username: string } }>
 ```
 
 #### Logout
@@ -286,12 +307,13 @@ interface User {
 
 ### Authentication Flow
 
-1. User makes POST request to `/api/auth/login` with credentials
-2. If credentials are valid, server sets global user state
-3. User remains authenticated until:
-    - Logout is called
-    - Server restarts
-    - Session expires
+1. The admin sends `POST /api/auth/login` with username and password
+2. If they are correct, the API returns a signed JWT (valid `JWT_EXPIRES_IN`, default 12 h)
+3. The admin sends `Authorization: Bearer <token>` on every change
+4. **All GET endpoints are public. Every POST, PUT, PATCH and DELETE returns 401 without a valid token.**
+5. `POST /api/auth/register` also needs a token. The first user is created from the command line:
+   `npm run create-user -- <username> <password>`
+6. Login is limited to 10 attempts per 15 minutes per IP (429 after that)
 
 ### Example Login Request
 
@@ -299,6 +321,15 @@ interface User {
 curl -X POST http://localhost:7000/api/auth/login ^
 -H "Content-Type: application/json" ^
 -d "{\"username\":\"adminuser\",\"password\":\"password123\"}"
+```
+
+### Example protected request
+
+```bash
+curl -X PUT http://localhost:7000/api/site-settings ^
+-H "Content-Type: application/json" ^
+-H "Authorization: Bearer <token>" ^
+-d "{\"pages\":{\"chambre\":{\"navbar\":true}}}"
 ```
 
 ### Example Logout Request
@@ -318,11 +349,10 @@ curl http://localhost:7000/api/auth/logout
 }
 ```
 
-#### Failed Login
+#### Failed Login (401)
 
 ```json
 {
-	"status": 400,
 	"message": "Username or password are incorrect",
 	"success": false
 }
@@ -338,7 +368,37 @@ curl http://localhost:7000/api/auth/logout
 }
 ```
 
-// ...existing code...
+### Menu PDF Operations
+
+`type` is `food` (Meny) or `wine` (Vinlista) on the website; `lunch` and `drinks` also exist.
+
+```http
+GET    /api/menu-pdfs?type=food           List PDFs, newest first
+GET    /api/menu-pdfs/active?type=food    The active PDF (404 if none)
+POST   /api/menu-pdfs/upload              (token) multipart: file, type, title?, activate?
+PATCH  /api/menu-pdfs/{id}/activate       (token) Show on the website; the previous one of that type is turned off
+PATCH  /api/menu-pdfs/{id}/deactivate     (token) Website falls back to its placeholder PDF
+DELETE /api/menu-pdfs/{id}                (token) Also deletes the file in Cloudinary
+```
+
+### Site Operations
+
+```http
+GET /api/site-settings                    Which pages show in the navbar / on the homepage
+PUT /api/site-settings                    (token) { "pages": { "chambre": { "navbar": true, "home": false } } }
+GET /api/site-config                      What the website reads: page switches + active Meny/Vinlista PDF
+GET /api/health                           API and database status
+```
+
+Pages: `chambre`, `events`, `gallery`. Placements: `navbar`, `home`. Only the values you send change.
+
+### Opening Hours: whole week
+
+```http
+PUT /api/openingHours                     (token) { "days": [{ "day": "Måndag", "hours": { "from": "", "to": "" } }, ...] }
+```
+
+Empty `from` and `to` = closed.
 
 ## Error Handling
 
@@ -347,7 +407,10 @@ curl http://localhost:7000/api/auth/logout
 -   200: Success
 -   201: Created
 -   400: Bad Request
+-   401: Missing, invalid or expired token / wrong login
 -   404: Not Found
+-   413: PDF larger than 10 MB
+-   429: Too many login attempts
 -   500: Server Error
 
 ### Error Response Example
@@ -371,19 +434,29 @@ curl http://localhost:7000/api/auth/logout
 
 ### Environment Variables
 
-Create a `.env` file:
+Copy `.env.example` to `.env`:
 
 ```env
 PORT=7000
 CONNECTION_STRING=mongodb+srv://[username]:[password]@[cluster].mongodb.net/[database]
+JWT_SECRET=long-random-string
+JWT_EXPIRES_IN=12h
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_FOLDER=menu-pdfs
 ```
+
+Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).
 
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/harpaviljongen-DB-API.git
+git clone https://github.com/DavidAkerlind/harpaviljongen-DB-API.git
 cd harpaviljongen-DB-API
 npm install
+npm run seed                                     # empty database: opening hours + page settings
+npm run create-user -- <username> <password>     # an admin login
 npm run dev
 ```
 

@@ -1,0 +1,828 @@
+{
+	"info": {
+		"name": "Harpaviljongen API",
+		"description": "Requests for the features used by the new admin.\n\n1. Pick the environment \"Harpaviljongen – Local\" (or Production) top right.\n2. Fill in username and password in the environment.\n3. Run \"Auth → Login\". The token is saved automatically and used by every other request.\n\nAll GETs are public. POST/PUT/PATCH/DELETE need the token.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:7000/api"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "pdfId",
+			"value": ""
+		}
+	],
+	"item": [
+		{
+			"name": "1. Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"const token = pm.response.json().data?.token;",
+									"if (token) {",
+									"    pm.collectionVariables.set('token', token);",
+									"    console.log('Token saved to collection variable \"token\"');",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Me (check token)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Öppettider",
+			"item": [
+				{
+					"name": "Get opening hours",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/openingHours",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"openingHours"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Update whole week",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/openingHours",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"openingHours"
+							]
+						},
+						"description": "Empty from and to = closed.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"days\": [\n    {\n      \"day\": \"Måndag\",\n      \"hours\": {\n        \"from\": \"\",\n        \"to\": \"\"\n      }\n    },\n    {\n      \"day\": \"Tisdag\",\n      \"hours\": {\n        \"from\": \"\",\n        \"to\": \"\"\n      }\n    },\n    {\n      \"day\": \"Onsdag\",\n      \"hours\": {\n        \"from\": \"\",\n        \"to\": \"\"\n      }\n    },\n    {\n      \"day\": \"Torsdag\",\n      \"hours\": {\n        \"from\": \"17:00\",\n        \"to\": \"00:00\"\n      }\n    },\n    {\n      \"day\": \"Fredag\",\n      \"hours\": {\n        \"from\": \"17:00\",\n        \"to\": \"00:00\"\n      }\n    },\n    {\n      \"day\": \"Lördag\",\n      \"hours\": {\n        \"from\": \"17:00\",\n        \"to\": \"00:00\"\n      }\n    },\n    {\n      \"day\": \"Söndag\",\n      \"hours\": {\n        \"from\": \"\",\n        \"to\": \"\"\n      }\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Update one day",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/openingHours/day/Onsdag",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"openingHours",
+								"day",
+								"Onsdag"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"hours\": {\n    \"from\": \"16:00\",\n    \"to\": \"23:00\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "3. Sidor (navbar & startsida)",
+			"item": [
+				{
+					"name": "Get page settings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/site-settings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"site-settings"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Update page settings",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/site-settings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"site-settings"
+							]
+						},
+						"description": "navbar = link in the navbar, home = button on the homepage. Only the values you send change.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"pages\": {\n    \"chambre\": {\n      \"navbar\": true,\n      \"home\": true\n    },\n    \"events\": {\n      \"navbar\": false,\n      \"home\": false\n    },\n    \"gallery\": {\n      \"navbar\": true,\n      \"home\": false\n    }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "4. Meny- & vinlista-PDF:er",
+			"item": [
+				{
+					"name": "List food PDFs (Meny)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs?type=food",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "food"
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "List wine PDFs (Vinlista)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs?type=wine",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "wine"
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get active Meny PDF",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs/active?type=food",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs",
+								"active"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "food"
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				},
+				{
+					"name": "Upload PDF",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs",
+								"upload"
+							]
+						},
+						"description": "In the Body tab, choose a PDF for the \"file\" row. The new id is saved as {{pdfId}} for the requests below.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Pick a PDF file (max 10 MB)"
+								},
+								{
+									"key": "type",
+									"value": "food",
+									"type": "text",
+									"description": "food = Meny, wine = Vinlista"
+								},
+								{
+									"key": "title",
+									"value": "Testmeny",
+									"type": "text"
+								},
+								{
+									"key": "activate",
+									"value": "false",
+									"type": "text",
+									"description": "true = show on the website right away"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', () => pm.response.to.have.status(201));",
+									"const id = pm.response.json().data?._id;",
+									"if (id) pm.collectionVariables.set('pdfId', id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Activate PDF {{pdfId}}",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs/{{pdfId}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs",
+								"{{pdfId}}",
+								"activate"
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Deactivate PDF {{pdfId}}",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs/{{pdfId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs",
+								"{{pdfId}}",
+								"deactivate"
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete PDF {{pdfId}}",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs/{{pdfId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs",
+								"{{pdfId}}"
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "5. Hemsidan & status",
+			"item": [
+				{
+					"name": "Site config (what the website reads)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/site-config",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"site-config"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "6. Security checks (should fail)",
+			"item": [
+				{
+					"name": "Write without token → 401",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/openingHours/day/Måndag",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"openingHours",
+								"day",
+								"Måndag"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"hours\": {\n    \"from\": \"01:00\",\n    \"to\": \"02:00\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Upload without token → 401",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-pdfs/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-pdfs",
+								"upload"
+							]
+						},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "type",
+									"value": "food",
+									"type": "text"
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Register without token → 401",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"someone\",\n  \"password\": \"somepassword\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Wrong password → 401",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"wrong-password\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

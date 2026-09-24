@@ -6,6 +6,8 @@ import eventsRouter from './routes/eventRouter.js';
 import authRouter from './routes/authRouter.js';
 import wineListRouter from './routes/wineListRouter.js';
 import menuPdfRouter from './routes/menuPdfRoutes.js';
+import siteSettingsRouter from './routes/siteSettingsRouter.js';
+import siteConfigRouter from './routes/siteConfigRouter.js';
 // Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -25,6 +27,9 @@ mongoose.connect(process.env.CONNECTION_STRING);
 const database = mongoose.connection;
 const swaggerDocs = YAML.load('./docs/docs.yml');
 
+// Render sits behind a proxy; needed so req.ip is the visitor (used by the login limiter)
+app.set('trust proxy', 1);
+
 // Middlewares
 app.use(corsMiddleware);
 app.options('/{*path}', corsMiddleware); // handle preflight for all routes (Express 5 syntax)
@@ -41,6 +46,23 @@ app.use('/api/events', eventsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/wine-list', wineListRouter);
 app.use('/api/menu-pdfs', menuPdfRouter);
+app.use('/api/site-settings', siteSettingsRouter);
+app.use('/api/site-config', siteConfigRouter);
+
+// Health check for the admin's status view
+app.get('/api/health', (req, res) => {
+	const databaseUp = database.readyState === 1;
+	res.status(databaseUp ? 200 : 503).json({
+		status: databaseUp ? 200 : 503,
+		success: databaseUp,
+		message: databaseUp ? 'API and database are up' : 'Database is not connected',
+		data: {
+			api: 'up',
+			database: databaseUp ? 'up' : 'down',
+			uptimeSeconds: Math.round(process.uptime()),
+		},
+	});
+});
 
 // Felhantering av databas
 database.on('error', (error) => console.log(error));

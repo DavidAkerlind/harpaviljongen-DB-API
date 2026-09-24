@@ -3,7 +3,13 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const SECRET = process.env.SECRET;
+// JWT_SECRET is the documented name; SECRET is kept so an older Render setup keeps working
+const SECRET = process.env.JWT_SECRET || process.env.SECRET;
+const EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
+
+export function isAuthConfigured() {
+	return Boolean(SECRET);
+}
 
 export async function hashPassword(password) {
 	const hashedPassword = await bcrypt.hash(password, 10);
@@ -16,15 +22,16 @@ export async function comparePasswords(password, hashedPassword) {
 }
 
 export function signToken(payload) {
-	const token = jwt.sign(payload, SECRET, { expiresIn: 60 * 60 });
+	const token = jwt.sign(payload, SECRET, { expiresIn: EXPIRES_IN });
 	return token;
 }
 
 export function verifyToken(token) {
+	if (!SECRET) return null;
 	try {
 		const decoded = jwt.verify(token, SECRET);
 		return decoded;
 	} catch (error) {
-		console.log(error.message);
+		return null;
 	}
 }

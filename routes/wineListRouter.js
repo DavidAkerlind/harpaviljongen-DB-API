@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import { WineListController } from '../controllers/wineListController.js';
 import { fallbackController } from '../services/fallbackService.js';
+import { protectWrites } from '../middlewares/auth.js';
 
 const router = Router();
+
+// Reads are public, everything else needs a login token
+router.use(protectWrites);
 
 // Hämta alla vinblad
 router.get('/', WineListController.getAll);
