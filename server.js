@@ -8,6 +8,7 @@ import wineListRouter from './routes/wineListRouter.js';
 import menuPdfRouter from './routes/menuPdfRoutes.js';
 import siteSettingsRouter from './routes/siteSettingsRouter.js';
 import siteConfigRouter from './routes/siteConfigRouter.js';
+import userRouter from './routes/userRouter.js';
 // Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -15,6 +16,7 @@ import mongoose from 'mongoose';
 import { corsMiddleware } from './middlewares/corsConfig.js';
 import logger from './middlewares/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
+import { ensureUserRoles } from './services/userService.js';
 // Swagger import
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
@@ -48,6 +50,7 @@ app.use('/api/wine-list', wineListRouter);
 app.use('/api/menu-pdfs', menuPdfRouter);
 app.use('/api/site-settings', siteSettingsRouter);
 app.use('/api/site-config', siteConfigRouter);
+app.use('/api/users', userRouter);
 
 // Health check for the admin's status view
 app.get('/api/health', (req, res) => {
@@ -68,8 +71,14 @@ app.get('/api/health', (req, res) => {
 database.on('error', (error) => console.log(error));
 
 // DB EmitEvents
-database.once('connected', () => {
+database.once('connected', async () => {
 	console.log('DB Connected');
+	try {
+		const upgraded = await ensureUserRoles();
+		if (upgraded) console.log(`Gave ${upgraded} existing user(s) the admin role`);
+	} catch (error) {
+		console.log('Could not give existing users a role:', error.message);
+	}
 	// Start server
 	app.listen(PORT, () => {
 		console.log(`Server is running on port ${PORT}`);

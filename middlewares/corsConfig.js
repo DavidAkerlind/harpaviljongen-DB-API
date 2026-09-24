@@ -14,10 +14,10 @@ export const allowedOrigins = [
 	'https://davidakerlind.github.io', // Old Admin Service URL (GitHub Pages)
 ];
 
-// Cloudflare Pages preview deploys, e.g. https://<branch>.harpaviljongen.pages.dev
-// and https://<branch>.harpaviljongen-admin.pages.dev
+// Cloudflare Pages and their preview deploys, e.g. https://<branch>.harpaviljongen.pages.dev
+// and https://<branch>.harpaviljongen-admin-service.pages.dev (the admin's Pages project)
 const allowedOriginPatterns = [
-	/^https:\/\/([a-z0-9-]+\.)?harpaviljongen(-admin)?\.pages\.dev$/,
+	/^https:\/\/([a-z0-9-]+\.)?harpaviljongen(-admin|-admin-service)?\.pages\.dev$/,
 ];
 
 const isAllowedOrigin = (origin) =>
