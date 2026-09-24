@@ -4,13 +4,16 @@ import User from '../models/user.js';
 // "Anna" and "anna" count as the same username
 const CASE_INSENSITIVE = { locale: 'sv', strength: 2 };
 
+// Only strings, so a body like { "username": { "$ne": null } } can't match someone
 export async function getUser(username) {
-	return User.findOne({ username: username?.trim() }).collation(
+	if (typeof username !== 'string') return null;
+	return User.findOne({ username: username.trim() }).collation(
 		CASE_INSENSITIVE
 	);
 }
 
 export async function getUserById(userId) {
+	if (typeof userId !== 'string') return null;
 	return User.findOne({ userId });
 }
 
