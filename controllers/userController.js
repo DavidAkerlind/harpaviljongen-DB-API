@@ -5,6 +5,7 @@ import {
 	getUser,
 	getUserById,
 	listUsers,
+	removeAvatarFile,
 	setPassword,
 	updateUserRole,
 } from '../services/userService.js';
@@ -91,6 +92,7 @@ export class UserController {
 		}
 
 		await deleteUser(userId);
+		await removeAvatarFile(user);
 		await logActivity(req, 'user.delete', { username: user.username });
 		res.json(constructResObj(200, 'User deleted successfully', true, user));
 	}

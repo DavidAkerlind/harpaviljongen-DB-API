@@ -8,7 +8,7 @@ This guide runs the **API**, the **admin** and the **public website** on your ow
 | Admin           | `harpaviljongen-admin-service`| http://localhost:5174            |
 | Public website  | `harpaviljongen`              | http://localhost:5173            |
 
-Branches: the **API** and the **admin** use `claude/user-roles` (users and roles, upload card). The **website** has no changes for it, so use `main` there.
+Branches: the **API** and the **admin** use `claude/profile-and-change-log` (your profile, profile pictures, all changes with filters). The **website** has no changes for it, so use `main` there.
 
 The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit `.env` files in VS Code or another editor rather than creating them with `echo`, because PowerShell can save them in an encoding Node and Vite can't read.
 
@@ -35,7 +35,7 @@ The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit
 ```bash
 cd harpaviljongen-DB-API
 git fetch origin
-git checkout claude/user-roles
+git checkout claude/profile-and-change-log
 npm install
 cp .env.example .env
 ```
@@ -51,6 +51,7 @@ CLOUDINARY_CLOUD_NAME=...        # same Cloudinary account as production is fine
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 CLOUDINARY_FOLDER=menu-pdfs-dev  # keeps test uploads out of the production folder
+CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev  # same for profile pictures
 ```
 
 Generate a random secret with:
@@ -93,9 +94,9 @@ You should see `DB Connected` and `Server is running on port 7000`. Check:
 | **2. Öppettider** | `Update whole week` → 200 and all seven days back, Monday first. Empty `from`/`to` = closed. |
 | **3. Sidor** | `Update page settings` → 200. Only the values you send change. |
 | **4. Meny- & vinlista-PDF:er** | `Upload PDF`: in the **Body** tab click *Select files* on the `file` row and pick a PDF. `type`: `food` = Meny, `wine` = Vinlista. The new id is saved as `{{pdfId}}` for *Activate*, *Deactivate* and *Delete*. |
-| **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). `Senaste ändringar` lists who changed what. |
+| **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). `Senaste ändringar` lists who changed what, the `Ändringar:` requests show the filters, and one deletes entries older than 1 year (harmless: those are deleted automatically anyway). |
 | **6. Security checks** | All should return **401**. They prove that nobody can change anything without logging in. |
-| **7. Användare (bara admin)** | Needs an **admin** login. Creates a temporary employee, logs in as it, checks that it gets **403** on users but can change content, changes its own password, gets a new password from the admin (old tokens → **401**), makes it admin and back, deletes it, and checks that its token stops working (**401**). Run the folder as a whole (it passes values between requests). It never touches your own password. |
+| **7. Användare (bara admin)** | Needs an **admin** login. Creates a temporary employee, logs in as it, checks that it gets **403** on users but can change content, changes its own password, gets a new password from the admin (old tokens → **401**), changes its own name and username, uploads and removes a profile picture, finds its changes in the log, makes it admin and back, deletes it, and checks that its token stops working (**401**). Run the folder as a whole (it passes values between requests). It never touches your own account. For the picture upload, pick an image in its *Body* tab first; without one that test is skipped. |
 
 You can also run everything at once: click the collection → **Run** (pick a PDF for the upload row first).
 
@@ -110,7 +111,7 @@ You can also run everything at once: click the collection → **Run** (pick a PD
 ```bash
 cd harpaviljongen-admin-service
 git fetch origin
-git checkout claude/user-roles
+git checkout claude/profile-and-change-log
 npm install
 cp .env.example .env.local     # points the admin to http://localhost:7000/api
 npm run dev
@@ -161,7 +162,12 @@ Keep the admin and the website open side by side. After a change in the admin, *
 | **⋮ → Nytt lösenord** on Anna | Her open window is logged out on her next click; she logs in with the new password. |
 | Your name at the bottom of the sidebar → **Byt lösenord** (phone: your initial top right) | A wrong current password says *Nuvarande lösenord stämmer inte.* After a successful change you stay logged in here; another browser logged in as you is logged out. |
 | **Menyer**: the pencil next to a PDF's name | Rename it. The new name shows right away. |
-| **Översikt → Senaste ändringar** | Everything above is listed with who did it (*Du* for you). *Visa fler* shows up to 30. |
+| **Översikt → Senaste ändringar** | Everything above is listed with who did it (*Du* for you). |
+| Your name at the bottom of the sidebar → **Min profil** (phone: your initial top right) | Add a picture (click the round picture or *Lägg till bild*). It appears in the sidebar, in *Användare* and next to your changes. |
+| **Min profil**: fill in *Namn*, change *Användarnamn*, **Spara** | The sidebar and *Hej, …!* use your first name. Log out and in with the new username (upper/lower case doesn't matter). |
+| **Översikt → Senaste ändringar → Visa alla** | *Alla ändringar*, grouped by day, 30 at a time (*Visa fler*). |
+| On *Alla ändringar*: *Datum* (Idag, Igår, 7/30 dagar, *Välj dag…*, *Välj period…*), *Kategori*, *Användare* | The list and the count follow the filters. Reload: the filters stay (they're in the address). *Rensa filter* resets. |
+| **Rensa logg** on *Alla ändringar* (admins only) | Shows how many changes are older than 30 days, 3 months, 6 months, 1 year, and in total. Pick one, confirm: they're gone and *Du tog bort … ur loggen* is at the top. *Allt* empties the log. Staff don't see the button. |
 | Stop the API (Ctrl+C) and reload the website | Navbar and buttons still work with the last settings it saw (the opening hours in the footer show an error until the API is back — same as today). |
 
 Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar, and *Användare* and *Logga ut* are behind your initial top right.

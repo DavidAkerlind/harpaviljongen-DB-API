@@ -18,6 +18,7 @@ import { corsMiddleware } from './middlewares/corsConfig.js';
 import logger from './middlewares/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
 import { ensureUserRoles } from './services/userService.js';
+import { ensureActivityIndexes } from './services/activityService.js';
 // Swagger import
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
@@ -80,6 +81,11 @@ database.once('connected', async () => {
 		if (upgraded) console.log(`Gave ${upgraded} existing user(s) the admin role`);
 	} catch (error) {
 		console.log('Could not give existing users a role:', error.message);
+	}
+	try {
+		await ensureActivityIndexes();
+	} catch (error) {
+		console.log('Could not update the activity log indexes:', error.message);
 	}
 	// Start server
 	app.listen(PORT, () => {

@@ -46,6 +46,10 @@
 		{
 			"key": "oldEmployeeToken",
 			"value": ""
+		},
+		{
+			"key": "todayStart",
+			"value": ""
 		}
 	],
 	"item": [
@@ -694,7 +698,100 @@
 								}
 							]
 						},
-						"description": "Who changed what, newest first. Needs a login (any role)."
+						"description": "The change log, newest first. Needs a login (any role). Filters: from, to (ISO dates, to is exclusive), category (menus, openingHours, pages, users, account), userId, before (id of the last entry, for the next page)."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"const data = pm.response.json().data;",
+									"pm.test('items, total and hasMore', () => {",
+									"    pm.expect(data.items).to.be.an('array');",
+									"    pm.expect(data.total).to.be.a('number');",
+									"    pm.expect(data.hasMore).to.be.a('boolean');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Ändringar: menus from today",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?category=menus&from={{todayStart}}&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "menus"
+								},
+								{
+									"key": "from",
+									"value": "{{todayStart}}"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Midnight today in your own time zone, as the admin sends it",
+									"const d = new Date(); d.setHours(0, 0, 0, 0);",
+									"pm.collectionVariables.set('todayStart', d.toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Only PDF changes from today', () => {",
+									"    const since = new Date(pm.collectionVariables.get('todayStart'));",
+									"    for (const item of pm.response.json().data.items) {",
+									"        pm.expect(item.type).to.match(/^pdf\\./);",
+									"        pm.expect(new Date(item.createdAt) >= since).to.be.true;",
+									"    }",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Ändringar: people in the log",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity",
+								"users"
+							]
+						}
 					},
 					"event": [
 						{
@@ -704,6 +801,41 @@
 								"exec": [
 									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
 									"pm.test('A list', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Ändringar: delete entries older than 1 year (admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?olderThan=1y",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "olderThan",
+									"value": "1y"
+								}
+							]
+						},
+						"description": "Admins only. olderThan: 30d, 3m, 6m, 1y or all. 1y is harmless: entries older than a year are deleted automatically anyway. Careful with 'all' on production."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Says how many', () => pm.expect(pm.response.json().data.deleted).to.be.a('number'));"
 								]
 							}
 						}
@@ -937,6 +1069,42 @@
 					]
 				},
 				{
+					"name": "Clear log without token → 401",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?olderThan=1y",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "olderThan",
+									"value": "1y"
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
 					"name": "Wrong password → 401",
 					"request": {
 						"method": "POST",
@@ -1133,6 +1301,49 @@
 							],
 							"path": [
 								"users"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{employeeToken}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Employee clears the log → 403",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?olderThan=1y",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "olderThan",
+									"value": "1y"
+								}
 							]
 						},
 						"auth": {
@@ -1478,6 +1689,254 @@
 								"exec": [
 									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
 									"pm.collectionVariables.set('employeeToken', pm.response.json().data.token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Employee changes own name and username",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{newUsername}}-x\",\n  \"name\": \"Test Testsson\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{employeeToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"description": "Send only what you want to change. name: null removes the name."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"const user = pm.response.json().data.user;",
+									"pm.test('Name and username changed', () => {",
+									"    pm.expect(user.name).to.eql('Test Testsson');",
+									"    pm.expect(user.username).to.eql(pm.collectionVariables.get('newUsername') + '-x');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Username taken → 409",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"{{username}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{employeeToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"description": "Tries to take the admin's username (from the environment)."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 409', () => pm.response.to.have.status(409));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Employee uploads a profile picture",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/avatar",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"avatar"
+							]
+						},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Pick a JPG, PNG or WebP (max 5 MB)"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{employeeToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"description": "Body → form-data → file: pick a JPG, PNG or WebP. Stored as a square JPG."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Needs an image picked in the Body tab (file row). Without one this test is skipped.",
+									"const file = pm.request.body.formdata.find((f) => f.key === 'file');",
+									"const picked = file && file.src && (!Array.isArray(file.src) || file.src.length);",
+									"(picked ? pm.test : pm.test.skip)('Status is 200 and a picture URL', () => {",
+									"    pm.response.to.have.status(200);",
+									"    pm.expect(pm.response.json().data.user.avatarUrl).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Employee removes the profile picture",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/avatar",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"avatar"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{employeeToken}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('No picture', () => pm.expect(pm.response.json().data.user.avatarUrl).to.be.null);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Change log: this employee's account changes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?userId={{newUserId}}&category=account",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{newUserId}}"
+								},
+								{
+									"key": "category",
+									"value": "account"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"const { items } = pm.response.json().data;",
+									"pm.test('Has the name change, all by this user', () => {",
+									"    pm.expect(items.some((i) => i.type === 'account.update')).to.be.true;",
+									"    for (const item of items) pm.expect(item.userId).to.eql(pm.collectionVariables.get('newUserId'));",
+									"});"
 								]
 							}
 						}
