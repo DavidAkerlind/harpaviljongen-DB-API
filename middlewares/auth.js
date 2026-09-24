@@ -1,29 +1,43 @@
 import { verifyToken } from '../utils/authUtil.js';
+import { getUserById } from '../services/userService.js';
 
 const READ_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
-export function authenticateUser(req, res, next) {
+const unauthorized = (res, message) =>
+	res.status(401).json({ status: 401, success: false, message });
+
+// Checks the token, then that the account still exists, so a deleted user or a
+// changed role takes effect right away instead of when the token expires.
+export async function authenticateUser(req, res, next) {
 	const header = req.headers.authorization;
 	if (!header || !header.startsWith('Bearer ')) {
-		return res.status(401).json({
-			status: 401,
-			success: false,
-			message: 'No token provided',
-		});
+		return unauthorized(res, 'No token provided');
 	}
 
-	const token = header.replace('Bearer ', '');
-	const decoded = verifyToken(token);
-	if (!decoded) {
-		return res.status(401).json({
-			status: 401,
-			success: false,
-			message: 'Invalid or expired token',
-		});
+	const decoded = verifyToken(header.replace('Bearer ', ''));
+	if (!decoded) return unauthorized(res, 'Invalid or expired token');
+
+	const user = await getUserById(decoded.userId);
+	if (!user) return unauthorized(res, 'This account no longer exists');
+	// Tokens from before roles existed have no version and count as 0
+	if ((decoded.v ?? 0) !== (user.tokenVersion ?? 0)) {
+		return unauthorized(res, 'The password has been changed, log in again');
 	}
 
-	req.user = { userId: decoded.userId, username: decoded.username };
+	req.user = { userId: user.userId, username: user.username, role: user.role };
 	next();
+}
+
+// Use after authenticateUser, e.g. router.use(authenticateUser, requireRole('admin'))
+export function requireRole(...roles) {
+	return (req, res, next) => {
+		if (roles.includes(req.user?.role)) return next();
+		res.status(403).json({
+			status: 403,
+			success: false,
+			message: 'You do not have permission to do this',
+		});
+	};
 }
 
 // Public reads, logged-in writes. Used on every router that the public site reads from.

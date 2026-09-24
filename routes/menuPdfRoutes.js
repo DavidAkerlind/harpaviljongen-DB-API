@@ -23,6 +23,9 @@ router.get('/', MenuPdfController.getAllPdfs);
 router.patch('/:id/activate', MenuPdfController.activatePdf);
 router.patch('/:id/deactivate', MenuPdfController.deactivatePdf);
 
+// PATCH - Rename, { "title": "Höstmeny 2026" }
+router.patch('/:id', MenuPdfController.renamePdf);
+
 // DELETE - Delete a PDF by id (also removes the file from Cloudinary)
 router.delete('/:id', MenuPdfController.deletePdf);
 

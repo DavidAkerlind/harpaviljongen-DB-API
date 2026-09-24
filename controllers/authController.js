@@ -1,14 +1,24 @@
-import { getUser } from '../services/userService.js';
+import { getUser, getUserById, setPassword } from '../services/userService.js';
 import { constructResObj } from '../utils/constructResObj.js';
-import { v4 as uuid } from 'uuid';
-import { registerUser } from '../services/userService.js';
-
 import {
 	comparePasswords,
 	hashPassword,
 	isAuthConfigured,
 	signToken,
 } from '../utils/authUtil.js';
+import { passwordProblem } from '../utils/userValidation.js';
+
+const tokenPayload = (user) => ({
+	userId: user.userId,
+	username: user.username,
+	v: user.tokenVersion ?? 0,
+});
+
+const publicUser = (user) => ({
+	userId: user.userId,
+	username: user.username,
+	role: user.role,
+});
 
 export class AuthController {
 	static async login(req, res, next) {
@@ -37,14 +47,11 @@ export class AuthController {
 				});
 			}
 
-			const token = signToken({
-				userId: user.userId,
-				username: user.username,
-			});
+			const token = signToken(tokenPayload(user));
 			res.json(
 				constructResObj(200, `User logged in successfully`, true, {
 					token,
-					user: { username: user.username },
+					user: publicUser(user),
 				})
 			);
 		} catch (error) {
@@ -62,48 +69,41 @@ export class AuthController {
 	static async me(req, res) {
 		res.json(
 			constructResObj(200, 'Token is valid', true, {
-				user: { username: req.user.username },
+				user: publicUser(req.user),
 			})
 		);
 	}
 
-	static async register(req, res, next) {
-		try {
-			const { username, password } = req.body;
-			const existingUser = await getUser(username);
-			const hashedPassword = await hashPassword(password);
+	// PUT /api/auth/password – change your own password. Other devices are logged out;
+	// this one gets a new token in the response.
+	static async changePassword(req, res) {
+		const { currentPassword, newPassword } = req.body ?? {};
+		const user = await getUserById(req.user.userId);
 
-			if (existingUser) {
-				next({
-					status: 400,
-					message: 'Username already exists',
-				});
-			} else {
-				const result = await registerUser({
-					username: username,
-					password: hashedPassword,
-					userId: uuid().substring(0, 5),
-				});
-				if (result) {
-					res.json(
-						constructResObj(
-							201,
-							'User registered successfully',
-							true
-						)
-					);
-					return;
-				} else {
-					next({
-						status: 400,
-						message: 'Failed to register user',
-					});
-				}
-			}
-		} catch (error) {
-			res.status(500).json(
-				constructResObj(500, 'Server error', false, error.message)
-			);
+		const isSame =
+			typeof currentPassword === 'string' &&
+			(await comparePasswords(currentPassword, user.password));
+		if (!isSame) {
+			// 400, not 401: the token is fine, only the password is wrong. Counted by the login limiter.
+			res.locals.failedAttempt = true;
+			return res
+				.status(400)
+				.json(
+					constructResObj(400, 'Current password is incorrect', false)
+				);
 		}
+		const problem = passwordProblem(newPassword);
+		if (problem) {
+			return res.status(400).json(constructResObj(400, problem, false));
+		}
+
+		await setPassword(user, await hashPassword(newPassword));
+		const token = signToken(tokenPayload(user));
+		res.json(
+			constructResObj(200, 'Password changed successfully', true, {
+				token,
+				user: publicUser(user),
+			})
+		);
 	}
 }

@@ -5,7 +5,11 @@ import {
 	uploadToCloudinary,
 } from '../services/cloudinaryService.js';
 import MenuPdf, { PDF_TYPES } from '../models/MenuPdf.js';
+import { logActivity } from '../services/activityService.js';
 import { constructResObj } from '../utils/constructResObj.js';
+
+const MAX_TITLE = 100;
+const pdfDetails = (pdf) => ({ pdfType: pdf.type, title: pdf.title });
 
 const invalidTypeMessage = `Invalid type. Must be one of: ${PDF_TYPES.join(', ')}`;
 
@@ -63,7 +67,7 @@ export class MenuPdfController {
 			const title = (
 				req.body.title?.trim() ||
 				req.file.originalname.replace(/\.pdf$/i, '')
-			).slice(0, 100);
+			).slice(0, MAX_TITLE);
 			const activate = isTruthy(req.body.activate);
 
 			const filename = `${type}-${Date.now()}`;
@@ -85,6 +89,10 @@ export class MenuPdfController {
 				publicId: result.public_id,
 				resourceType: result.resource_type,
 				isActive: activate,
+			});
+			await logActivity(req, 'pdf.upload', {
+				...pdfDetails(newPdf),
+				activated: activate,
 			});
 
 			res.status(201).json(
@@ -182,8 +190,10 @@ export class MenuPdfController {
 				{ type: pdf.type, isActive: true, _id: { $ne: pdf._id } },
 				{ isActive: false },
 			);
+			const wasActive = pdf.isActive;
 			pdf.isActive = true;
 			await pdf.save();
+			if (!wasActive) await logActivity(req, 'pdf.activate', pdfDetails(pdf));
 
 			res.json(
 				constructResObj(200, 'PDF activated successfully', true, pdf),
@@ -201,12 +211,48 @@ export class MenuPdfController {
 			const pdf = await findPdfOr404(req.params.id, res);
 			if (!pdf) return;
 
+			const wasActive = pdf.isActive;
 			pdf.isActive = false;
 			await pdf.save();
+			if (wasActive) await logActivity(req, 'pdf.deactivate', pdfDetails(pdf));
 
 			res.json(
 				constructResObj(200, 'PDF deactivated successfully', true, pdf),
 			);
+		} catch (error) {
+			res.status(500).json(
+				constructResObj(500, 'Server error', false, error.message),
+			);
+		}
+	}
+
+	// PATCH /api/menu-pdfs/:id { title } – the name shown in the admin
+	static async renamePdf(req, res) {
+		try {
+			const title =
+				typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+			if (!title || title.length > MAX_TITLE) {
+				return res
+					.status(400)
+					.json(
+						constructResObj(
+							400,
+							`Title must be 1–${MAX_TITLE} characters`,
+							false,
+						),
+					);
+			}
+			const pdf = await findPdfOr404(req.params.id, res);
+			if (!pdf) return;
+
+			const from = pdf.title;
+			if (from !== title) {
+				pdf.title = title;
+				await pdf.save();
+				await logActivity(req, 'pdf.rename', { ...pdfDetails(pdf), from });
+			}
+
+			res.json(constructResObj(200, 'PDF renamed successfully', true, pdf));
 		} catch (error) {
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message),
@@ -235,6 +281,10 @@ export class MenuPdfController {
 			}
 
 			await MenuPdf.findByIdAndDelete(pdf._id);
+			await logActivity(req, 'pdf.delete', {
+				...pdfDetails(pdf),
+				wasActive: pdf.isActive,
+			});
 
 			res.json(
 				constructResObj(200, 'PDF deleted successfully', true, pdf),

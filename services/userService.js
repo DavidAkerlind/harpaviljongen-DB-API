@@ -1,22 +1,61 @@
-import User from '../models/user.js';
+import { v4 as uuid } from 'uuid';
+import User, { USER_ROLES } from '../models/user.js';
 
+// "Anna" and "anna" count as the same username
+const CASE_INSENSITIVE = { locale: 'sv', strength: 2 };
+
+// Only strings, so a body like { "username": { "$ne": null } } can't match someone
 export async function getUser(username) {
-	try {
-		const user = User.findOne({ username: username });
-		if (user) return user;
-		else throw new Error('No user found');
-	} catch (error) {
-		console.log(error.message);
-		return null;
-	}
+	if (typeof username !== 'string') return null;
+	return User.findOne({ username: username.trim() }).collation(
+		CASE_INSENSITIVE
+	);
 }
 
-export async function registerUser(user) {
-	try {
-		const result = await User.create(user);
-		return result;
-	} catch (error) {
-		console.log(error.message);
-		return null;
-	}
+export async function getUserById(userId) {
+	if (typeof userId !== 'string') return null;
+	return User.findOne({ userId });
+}
+
+export async function listUsers() {
+	return User.find().sort({ role: 1, username: 1 }).collation(CASE_INSENSITIVE);
+}
+
+// password must already be hashed
+export async function createUser({ username, password, role }) {
+	return User.create({
+		username,
+		password,
+		role,
+		userId: uuid().substring(0, 5),
+	});
+}
+
+export async function updateUserRole(userId, role) {
+	return User.findOneAndUpdate(
+		{ userId },
+		{ role },
+		{ new: true, runValidators: true }
+	);
+}
+
+export async function deleteUser(userId) {
+	return User.findOneAndDelete({ userId });
+}
+
+// password must already be hashed. Logs the user out everywhere.
+export async function setPassword(user, password) {
+	user.password = password;
+	user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+	return user.save();
+}
+
+// Users created before roles existed were all admins.
+// Matches a missing role as well as null or anything unknown.
+export async function ensureUserRoles() {
+	const result = await User.updateMany(
+		{ role: { $nin: USER_ROLES } },
+		{ $set: { role: 'admin' } }
+	);
+	return result.modifiedCount;
 }

@@ -6,6 +6,8 @@ info:
 
         **Authentication:** all GET endpoints are public. Every POST, PUT, PATCH and DELETE needs a login token.
         Call `POST /auth/login`, copy `data.token` from the response, click **Authorize** above and paste it.
+
+        **Roles:** `admin` can do everything, including `/users`. `employee` can change content (menus, opening hours, pages) but gets 403 on `/users`.
     version: 1.0.0
     contact:
         name: API Support
@@ -184,18 +186,46 @@ components:
 
         User:
             type: object
+            description: The password is never returned.
+            properties:
+                userId:
+                    type: string
+                    example: 'f60d0'
+                username:
+                    type: string
+                    example: 'anna'
+                role:
+                    type: string
+                    enum: [admin, employee]
+                    example: 'employee'
+                createdAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: null for users created before roles existed
+
+        CreateUserRequest:
+            type: object
+            required:
+                - username
+                - password
             properties:
                 username:
                     type: string
-                    minLength: 6
-                    example: 'adminuser'
+                    minLength: 3
+                    maxLength: 30
+                    pattern: '^[\p{L}\p{N}._-]+$'
+                    description: Letters (å, ä, ö too), numbers, . _ or -. Must be unique, not case sensitive.
+                    example: 'anna'
                 password:
                     type: string
                     minLength: 8
-                    example: 'password123'
-                userId:
+                    maxLength: 72
+                    example: 'hemligt123'
+                role:
                     type: string
-                    example: 'xxxxx'
+                    enum: [admin, employee]
+                    default: employee
 
         LoginRequest:
             type: object
@@ -205,11 +235,10 @@ components:
             properties:
                 username:
                     type: string
-                    minLength: 6
+                    description: Not case sensitive
                     example: 'adminuser'
                 password:
                     type: string
-                    minLength: 8
                     example: 'password123'
 
         CreateMenuRequest:
@@ -325,6 +354,44 @@ components:
                 isActive:
                     type: boolean
                     description: 'At most one active PDF per type. The active one is linked from the website.'
+
+        Activity:
+            type: object
+            description: One entry in "Senaste ändringar". Kept for 180 days.
+            properties:
+                id:
+                    type: string
+                type:
+                    type: string
+                    enum:
+                        - pdf.upload
+                        - pdf.activate
+                        - pdf.deactivate
+                        - pdf.rename
+                        - pdf.delete
+                        - openingHours.update
+                        - pages.update
+                        - user.create
+                        - user.role
+                        - user.password
+                        - user.delete
+                    example: pdf.upload
+                username:
+                    type: string
+                    description: Who made the change (as the name was then)
+                    example: anna
+                details:
+                    type: object
+                    description: |
+                        Depends on the type:
+                        - pdf.*: `{ pdfType, title }`, plus `activated` (upload), `from` (rename), `wasActive` (delete)
+                        - openingHours.update: `{ days: ['Fredag'] }` (only days that changed)
+                        - pages.update: `{ changes: [{ page, placement, value }] }`
+                        - user.*: `{ username }`, plus `role` (create, role)
+                    example: { pdfType: food, title: 'Höstmeny 2026', activated: true }
+                createdAt:
+                    type: string
+                    format: date-time
 
         PageVisibility:
             type: object
@@ -851,9 +918,16 @@ paths:
                                             user:
                                                 type: object
                                                 properties:
+                                                    userId:
+                                                        type: string
+                                                        example: 'efe5a'
                                                     username:
                                                         type: string
                                                         example: 'adminuser'
+                                                    role:
+                                                        type: string
+                                                        enum: [admin, employee]
+                                                        example: 'admin'
                 '429':
                     description: Too many login attempts (max 10 per 15 minutes)
                 '401':
@@ -896,11 +970,44 @@ paths:
             tags:
                 - Authentication
             summary: Check that a token is still valid
+            description: Returns `{ user: { userId, username, role } }`. Also 401 if the account has been deleted.
             responses:
                 '200':
                     description: Token is valid
                 '401':
                     description: Missing, invalid or expired token
+
+    /auth/password:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Change your own password
+            description: Other devices are logged out (their tokens stop working). The response has a new token for this device. Wrong current passwords count towards the login limit.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [currentPassword, newPassword]
+                            properties:
+                                currentPassword:
+                                    type: string
+                                newPassword:
+                                    type: string
+                                    minLength: 8
+                                    maxLength: 72
+            responses:
+                '200':
+                    description: 'Password changed. data: { token, user }'
+                '400':
+                    description: Current password is incorrect, or the new one is too short/long
+                '401':
+                    description: Missing or invalid token
+                '429':
+                    description: Too many failed attempts
 
     /auth/register:
         post:
@@ -908,19 +1015,168 @@ paths:
                 - bearerAuth: []
             tags:
                 - Authentication
-            summary: Register new user (only for a logged-in admin)
+            summary: Register new user (admins only, same as POST /users)
             description: The first user is created from the command line with `npm run create-user -- <username> <password>`.
             requestBody:
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/LoginRequest'
+                            $ref: '#/components/schemas/CreateUserRequest'
             responses:
                 '201':
-                    description: User registered successfully
+                    description: User created
                 '400':
-                    description: Username already exists or validation error
+                    description: Validation error
+                '403':
+                    description: Logged in, but not an admin
+                '409':
+                    description: Username already exists
+
+    # Users (admins only)
+    /users:
+        get:
+            security:
+                - bearerAuth: []
+            tags:
+                - Users
+            summary: List all users (admins only)
+            responses:
+                '200':
+                    description: Users, admins first
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/User'
+                '401':
+                    description: Missing or invalid token
+                '403':
+                    description: Logged in, but not an admin
+        post:
+            security:
+                - bearerAuth: []
+            tags:
+                - Users
+            summary: Create a user (admins only)
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateUserRequest'
+            responses:
+                '201':
+                    description: User created
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/User'
+                '400':
+                    description: Invalid username, password or role
+                '403':
+                    description: Logged in, but not an admin
+                '409':
+                    description: Username already exists
+
+    /users/{userId}/password:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Users
+            summary: Set a new password for another user (admins only)
+            description: For someone who forgot theirs. They are logged out everywhere. Your own password is changed with PUT /auth/password.
+            parameters:
+                - in: path
+                  name: userId
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [password]
+                            properties:
+                                password:
+                                    type: string
+                                    minLength: 8
+                                    maxLength: 72
+            responses:
+                '200':
+                    description: Password changed
+                '400':
+                    description: Too short/long, or your own account
+                '403':
+                    description: Logged in, but not an admin
+                '404':
+                    description: User not found
+
+    /users/{userId}:
+        parameters:
+            - in: path
+              name: userId
+              required: true
+              schema:
+                  type: string
+              example: f60d0
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Users
+            summary: Change a user's role (admins only)
+            description: You can't change your own role, so there is always at least one admin.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [role]
+                            properties:
+                                role:
+                                    type: string
+                                    enum: [admin, employee]
+            responses:
+                '200':
+                    description: User updated
+                '400':
+                    description: Invalid role, or trying to change your own role
+                '403':
+                    description: Logged in, but not an admin
+                '404':
+                    description: User not found
+        delete:
+            security:
+                - bearerAuth: []
+            tags:
+                - Users
+            summary: Delete an employee account (admins only)
+            description: Only users with the role `employee` can be deleted, and not yourself. To remove an admin, change the role to employee first. Their token stops working right away.
+            responses:
+                '200':
+                    description: User deleted
+                '400':
+                    description: Trying to delete your own account
+                '403':
+                    description: Not an admin, or the user is an admin
+                '404':
+                    description: User not found
     /wine-list:
         get:
             tags:
@@ -1282,6 +1538,38 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
     /menu-pdfs/{id}:
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Rename a PDF (the name shown in the admin)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [title]
+                            properties:
+                                title:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 100
+                                    example: 'Höstmeny 2026'
+            responses:
+                '200':
+                    description: PDF renamed
+                '400':
+                    description: Empty or longer than 100 characters
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
         delete:
             security:
                 - bearerAuth: []
@@ -1301,6 +1589,39 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
                 '502':
                     description: Cloudinary could not delete the file; nothing was removed
+
+    # Senaste ändringar
+    /activity:
+        get:
+            security:
+                - bearerAuth: []
+            tags:
+                - Site
+            summary: Latest changes, newest first (logged-in users)
+            parameters:
+                - in: query
+                  name: limit
+                  schema:
+                      type: integer
+                      default: 20
+                      minimum: 1
+                      maximum: 100
+            responses:
+                '200':
+                    description: Latest changes
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/Activity'
+                '401':
+                    description: Missing or invalid token
 
     # Site settings (which pages are shown)
     /site-settings:
@@ -1394,9 +1715,11 @@ tags:
       description: Event management operations
     - name: Authentication
       description: User authentication operations
+    - name: Users
+      description: Create users, change roles, delete employees (admins only)
     - name: WineList
       description: Wine list management operations
     - name: Menu PDFs
       description: Meny and Vinlista PDFs shown on the website
     - name: Site
-      description: Page switches, site config and health
+      description: Page switches, site config, latest changes and health
