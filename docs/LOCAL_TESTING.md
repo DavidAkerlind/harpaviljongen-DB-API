@@ -10,6 +10,8 @@ This guide runs the **API**, the **admin** and the **public website** on your ow
 
 All three use the branch `claude/serene-fermat-05id5w`.
 
+The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit `.env` files in VS Code or another editor rather than creating them with `echo`, because PowerShell can save them in an encoding Node and Vite can't read.
+
 ---
 
 ## 0. Before you start
@@ -17,8 +19,9 @@ All three use the branch `claude/serene-fermat-05id5w`.
 -   Node.js 20 or newer (`node -v`)
 -   [Postman](https://www.postman.com/downloads/)
 -   A **test database**. Pick one:
-    -   **Docker (simplest):** `docker run -d --name harpaviljongen-mongo -p 27017:27017 mongo:7`
-        → connection string `mongodb://127.0.0.1:27017/harpaviljongen-dev`
+    -   **Docker:** start Docker Desktop, then run once `docker run -d --name harpaviljongen-mongo -p 27017:27017 mongo:7`
+        → connection string `mongodb://127.0.0.1:27017/harpaviljongen-dev`.
+        After a restart: `docker start harpaviljongen-mongo`. Check with `docker ps`.
     -   **Your Atlas cluster, but another database name:** take your normal connection string and change the database
         name, e.g. `mongodb+srv://USER:PASS@CLUSTER.mongodb.net/harpaviljongen-dev?retryWrites=true&w=majority`.
         Atlas creates the database on first write. (Your IP must be in Atlas → Network Access.)
@@ -59,10 +62,12 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 Fill the empty test database and create a login:
 
 ```bash
-npm run seed                                   # 7 opening-hour days + page settings (never overwrites)
-npm run create-user -- adminuser testpassword123   # username ≥ 6 chars, password ≥ 8
+npm run seed                                       # 7 opening-hour days + page settings (never overwrites)
+node scripts/createUser.js adminuser testpassword123   # username ≥ 6 chars, password ≥ 8
 npm run dev
 ```
+
+(`node scripts/createUser.js …` is the same as `npm run create-user -- …`, and avoids PowerShell swallowing the `--`.)
 
 You should see `DB Connected` and `Server is running on port 7000`. Check:
 
@@ -119,7 +124,7 @@ cd harpaviljongen
 git fetch origin
 git checkout claude/serene-fermat-05id5w
 npm install
-echo "VITE_API_URL=http://localhost:7000/api" > .env.local
+cp .env.example .env.local     # points the website to http://localhost:7000/api
 npm run dev
 ```
 
