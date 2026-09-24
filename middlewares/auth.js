@@ -19,6 +19,10 @@ export async function authenticateUser(req, res, next) {
 
 	const user = await getUserById(decoded.userId);
 	if (!user) return unauthorized(res, 'This account no longer exists');
+	// Tokens from before roles existed have no version and count as 0
+	if ((decoded.v ?? 0) !== (user.tokenVersion ?? 0)) {
+		return unauthorized(res, 'The password has been changed, log in again');
+	}
 
 	req.user = { userId: user.userId, username: user.username, role: user.role };
 	next();

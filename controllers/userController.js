@@ -5,12 +5,14 @@ import {
 	getUser,
 	getUserById,
 	listUsers,
+	setPassword,
 	updateUserRole,
 } from '../services/userService.js';
+import { logActivity } from '../services/activityService.js';
 import { hashPassword } from '../utils/authUtil.js';
 import { constructResObj } from '../utils/constructResObj.js';
+import { passwordProblem, usernameProblem } from '../utils/userValidation.js';
 
-const USERNAME_PATTERN = /^[\p{L}\p{N}._-]{3,30}$/u;
 const invalidRoleMessage = `Invalid role. Must be one of: ${USER_ROLES.join(', ')}`;
 
 const fail = (res, status, message) =>
@@ -28,20 +30,8 @@ export class UserController {
 			typeof req.body?.username === 'string' ? req.body.username.trim() : '';
 		const { password, role = 'employee' } = req.body ?? {};
 
-		if (!USERNAME_PATTERN.test(username)) {
-			return fail(
-				res,
-				400,
-				'Username must be 3–30 characters: letters, numbers, . _ or -'
-			);
-		}
-		if (typeof password !== 'string' || password.length < 8) {
-			return fail(res, 400, 'Password must be at least 8 characters');
-		}
-		// bcrypt only uses the first 72 bytes
-		if (Buffer.byteLength(password) > 72) {
-			return fail(res, 400, 'Password can be at most 72 characters');
-		}
+		const problem = usernameProblem(username) ?? passwordProblem(password);
+		if (problem) return fail(res, 400, problem);
 		if (!USER_ROLES.includes(role)) {
 			return fail(res, 400, invalidRoleMessage);
 		}
@@ -53,6 +43,10 @@ export class UserController {
 			username,
 			password: await hashPassword(password),
 			role,
+		});
+		await logActivity(req, 'user.create', {
+			username: user.username,
+			role: user.role,
 		});
 		res
 			.status(201)
@@ -71,8 +65,12 @@ export class UserController {
 			return fail(res, 400, "You can't change your own role");
 		}
 
+		const before = await getUserById(userId);
+		if (!before) return fail(res, 404, `User not found: ${userId}`);
 		const user = await updateUserRole(userId, role);
-		if (!user) return fail(res, 404, `User not found: ${userId}`);
+		if (before.role !== role) {
+			await logActivity(req, 'user.role', { username: user.username, role });
+		}
 		res.json(constructResObj(200, 'User updated successfully', true, user));
 	}
 
@@ -93,6 +91,30 @@ export class UserController {
 		}
 
 		await deleteUser(userId);
+		await logActivity(req, 'user.delete', { username: user.username });
 		res.json(constructResObj(200, 'User deleted successfully', true, user));
+	}
+
+	// PUT /api/users/:userId/password – set a new password for someone who forgot theirs.
+	// They are logged out everywhere. Your own password is changed with PUT /api/auth/password.
+	static async resetPassword(req, res) {
+		const { userId } = req.params;
+		const { password } = req.body ?? {};
+
+		if (userId === req.user.userId) {
+			return fail(
+				res,
+				400,
+				'Change your own password with PUT /api/auth/password'
+			);
+		}
+		const problem = passwordProblem(password);
+		if (problem) return fail(res, 400, problem);
+		const user = await getUserById(userId);
+		if (!user) return fail(res, 404, `User not found: ${userId}`);
+
+		await setPassword(user, await hashPassword(password));
+		await logActivity(req, 'user.password', { username: user.username });
+		res.json(constructResObj(200, 'Password changed successfully', true, user));
 	}
 }

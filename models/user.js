@@ -31,6 +31,12 @@ const userSchema = new Schema(
 			enum: USER_ROLES,
 			required: true,
 		},
+		// Goes up by one on every password change. A token carries the version it was
+		// signed with and stops working when they no longer match (see middlewares/auth.js).
+		tokenVersion: {
+			type: Number,
+			default: 0,
+		},
 	},
 	{
 		timestamps: true,

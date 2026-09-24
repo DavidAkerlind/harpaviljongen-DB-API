@@ -22,6 +22,9 @@ router.post('/', UserController.createUser);
 // PATCH – byt roll, { "role": "admin" }
 router.patch('/:userId', UserController.updateUser);
 
+// PUT – nytt lösenord åt någon annan, { "password": "minst-8-tecken" }
+router.put('/:userId/password', UserController.resetPassword);
+
 // DELETE – ta bort en personal-användare
 router.delete('/:userId', UserController.deleteUser);
 

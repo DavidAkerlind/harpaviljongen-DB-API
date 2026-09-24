@@ -1,5 +1,6 @@
-// Small in-memory limiter against password guessing on /api/auth/login.
-// Only failed logins count, so staff logging in from the same wifi don't lock each other out.
+// Small in-memory limiter against password guessing on /api/auth/login and /api/auth/password.
+// Only failed attempts count (401, or res.locals.failedAttempt set by the controller), so staff
+// logging in from the same wifi don't lock each other out.
 // Resets when the server restarts, which is fine for a single Render instance.
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_FAILED_ATTEMPTS = 10;
@@ -25,7 +26,7 @@ export function loginLimiter(req, res, next) {
 	}
 
 	res.on('finish', () => {
-		if (res.statusCode !== 401) return;
+		if (res.statusCode !== 401 && !res.locals.failedAttempt) return;
 		const current = failedAttempts.get(key);
 		if (current) current.count += 1;
 		else failedAttempts.set(key, { start: Date.now(), count: 1 });

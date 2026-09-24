@@ -24,6 +24,9 @@ router.post(
 	UserController.createUser
 );
 
+// PUT password – byt ditt eget lösenord, { "currentPassword": "...", "newPassword": "..." }
+router.put('/password', loginLimiter, authenticateUser, AuthController.changePassword);
+
 // POST login (validera body först)
 router.post('/login', loginLimiter, validateAuthBody, AuthController.login);
 

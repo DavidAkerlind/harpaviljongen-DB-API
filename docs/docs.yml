@@ -355,6 +355,44 @@ components:
                     type: boolean
                     description: 'At most one active PDF per type. The active one is linked from the website.'
 
+        Activity:
+            type: object
+            description: One entry in "Senaste ändringar". Kept for 180 days.
+            properties:
+                id:
+                    type: string
+                type:
+                    type: string
+                    enum:
+                        - pdf.upload
+                        - pdf.activate
+                        - pdf.deactivate
+                        - pdf.rename
+                        - pdf.delete
+                        - openingHours.update
+                        - pages.update
+                        - user.create
+                        - user.role
+                        - user.password
+                        - user.delete
+                    example: pdf.upload
+                username:
+                    type: string
+                    description: Who made the change (as the name was then)
+                    example: anna
+                details:
+                    type: object
+                    description: |
+                        Depends on the type:
+                        - pdf.*: `{ pdfType, title }`, plus `activated` (upload), `from` (rename), `wasActive` (delete)
+                        - openingHours.update: `{ days: ['Fredag'] }` (only days that changed)
+                        - pages.update: `{ changes: [{ page, placement, value }] }`
+                        - user.*: `{ username }`, plus `role` (create, role)
+                    example: { pdfType: food, title: 'Höstmeny 2026', activated: true }
+                createdAt:
+                    type: string
+                    format: date-time
+
         PageVisibility:
             type: object
             properties:
@@ -939,6 +977,38 @@ paths:
                 '401':
                     description: Missing, invalid or expired token
 
+    /auth/password:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Change your own password
+            description: Other devices are logged out (their tokens stop working). The response has a new token for this device. Wrong current passwords count towards the login limit.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [currentPassword, newPassword]
+                            properties:
+                                currentPassword:
+                                    type: string
+                                newPassword:
+                                    type: string
+                                    minLength: 8
+                                    maxLength: 72
+            responses:
+                '200':
+                    description: 'Password changed. data: { token, user }'
+                '400':
+                    description: Current password is incorrect, or the new one is too short/long
+                '401':
+                    description: Missing or invalid token
+                '429':
+                    description: Too many failed attempts
+
     /auth/register:
         post:
             security:
@@ -1019,6 +1089,42 @@ paths:
                     description: Logged in, but not an admin
                 '409':
                     description: Username already exists
+
+    /users/{userId}/password:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Users
+            summary: Set a new password for another user (admins only)
+            description: For someone who forgot theirs. They are logged out everywhere. Your own password is changed with PUT /auth/password.
+            parameters:
+                - in: path
+                  name: userId
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [password]
+                            properties:
+                                password:
+                                    type: string
+                                    minLength: 8
+                                    maxLength: 72
+            responses:
+                '200':
+                    description: Password changed
+                '400':
+                    description: Too short/long, or your own account
+                '403':
+                    description: Logged in, but not an admin
+                '404':
+                    description: User not found
 
     /users/{userId}:
         parameters:
@@ -1432,6 +1538,38 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
     /menu-pdfs/{id}:
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Rename a PDF (the name shown in the admin)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [title]
+                            properties:
+                                title:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 100
+                                    example: 'Höstmeny 2026'
+            responses:
+                '200':
+                    description: PDF renamed
+                '400':
+                    description: Empty or longer than 100 characters
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
         delete:
             security:
                 - bearerAuth: []
@@ -1451,6 +1589,39 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
                 '502':
                     description: Cloudinary could not delete the file; nothing was removed
+
+    # Senaste ändringar
+    /activity:
+        get:
+            security:
+                - bearerAuth: []
+            tags:
+                - Site
+            summary: Latest changes, newest first (logged-in users)
+            parameters:
+                - in: query
+                  name: limit
+                  schema:
+                      type: integer
+                      default: 20
+                      minimum: 1
+                      maximum: 100
+            responses:
+                '200':
+                    description: Latest changes
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/Activity'
+                '401':
+                    description: Missing or invalid token
 
     # Site settings (which pages are shown)
     /site-settings:
@@ -1551,4 +1722,4 @@ tags:
     - name: Menu PDFs
       description: Meny and Vinlista PDFs shown on the website
     - name: Site
-      description: Page switches, site config and health
+      description: Page switches, site config, latest changes and health

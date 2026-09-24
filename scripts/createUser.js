@@ -5,7 +5,12 @@
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { USER_ROLES } from '../models/user.js';
-import { createUser, ensureUserRoles, getUser } from '../services/userService.js';
+import {
+	createUser,
+	ensureUserRoles,
+	getUser,
+	setPassword,
+} from '../services/userService.js';
 import { hashPassword } from '../utils/authUtil.js';
 
 dotenv.config();
@@ -34,9 +39,8 @@ await ensureUserRoles();
 const hashed = await hashPassword(password);
 const existing = await getUser(username);
 if (existing) {
-	existing.password = hashed;
 	if (role) existing.role = role;
-	await existing.save();
+	await setPassword(existing, hashed); // also logs them out everywhere
 	console.log(
 		`Password updated for "${existing.username}" (role: ${existing.role})`
 	);

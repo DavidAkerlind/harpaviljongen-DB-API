@@ -9,6 +9,7 @@ import menuPdfRouter from './routes/menuPdfRoutes.js';
 import siteSettingsRouter from './routes/siteSettingsRouter.js';
 import siteConfigRouter from './routes/siteConfigRouter.js';
 import userRouter from './routes/userRouter.js';
+import activityRouter from './routes/activityRouter.js';
 // Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -51,6 +52,7 @@ app.use('/api/menu-pdfs', menuPdfRouter);
 app.use('/api/site-settings', siteSettingsRouter);
 app.use('/api/site-config', siteConfigRouter);
 app.use('/api/users', userRouter);
+app.use('/api/activity', activityRouter);
 
 // Health check for the admin's status view
 app.get('/api/health', (req, res) => {

@@ -1,4 +1,5 @@
 import OpeningHoursService from '../services/openingHoursService.js';
+import { logActivity } from '../services/activityService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 
 const VALID_DAYS = [
@@ -94,6 +95,11 @@ export class OpeningHoursController {
 				dayId,
 				updates
 			);
+			if (updatedHours) {
+				await logActivity(req, 'openingHours.update', {
+					days: [updatedHours.day],
+				});
+			}
 			if (!updatedHours) {
 				return res
 					.status(404)
@@ -155,9 +161,25 @@ export class OpeningHoursController {
 				cleaned.push({ day: entry.day, hours: { from, to } });
 			}
 
+			// Which days actually changed, for "Senaste ändringar"
+			const before = new Map(
+				(await OpeningHoursService.getAllOpeningHours()).map((d) => [
+					d.day,
+					`${d.hours?.from ?? ''}–${d.hours?.to ?? ''}`,
+				])
+			);
+			const changedDays = cleaned
+				.filter((d) => before.get(d.day) !== `${d.hours.from}–${d.hours.to}`)
+				.map((d) => d.day);
+
 			const hours = await OpeningHoursService.updateAllOpeningHours(
 				cleaned
 			);
+			if (changedDays.length) {
+				await logActivity(req, 'openingHours.update', {
+					days: VALID_DAYS.filter((day) => changedDays.includes(day)),
+				});
+			}
 			res.json(
 				constructResObj(
 					200,
@@ -180,6 +202,9 @@ export class OpeningHoursController {
 
 			const updatedHours =
 				await OpeningHoursService.updateOpeningHoursByDay(day, updates);
+			if (updatedHours) {
+				await logActivity(req, 'openingHours.update', { days: [day] });
+			}
 			if (!updatedHours) {
 				return res
 					.status(404)

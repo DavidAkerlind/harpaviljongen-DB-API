@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import User from '../models/user.js';
+import User, { USER_ROLES } from '../models/user.js';
 
 // "Anna" and "anna" count as the same username
 const CASE_INSENSITIVE = { locale: 'sv', strength: 2 };
@@ -43,10 +43,18 @@ export async function deleteUser(userId) {
 	return User.findOneAndDelete({ userId });
 }
 
-// Users created before roles existed were all admins
+// password must already be hashed. Logs the user out everywhere.
+export async function setPassword(user, password) {
+	user.password = password;
+	user.tokenVersion = (user.tokenVersion ?? 0) + 1;
+	return user.save();
+}
+
+// Users created before roles existed were all admins.
+// Matches a missing role as well as null or anything unknown.
 export async function ensureUserRoles() {
 	const result = await User.updateMany(
-		{ role: { $exists: false } },
+		{ role: { $nin: USER_ROLES } },
 		{ $set: { role: 'admin' } }
 	);
 	return result.modifiedCount;
