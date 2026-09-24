@@ -112,9 +112,9 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 
 ## Update: profile and all changes (branch `claude/profile-and-change-log`)
 
-Everyone can set a name, username and profile picture under **Min profil**, and **Översikt → Senaste ändringar → Visa alla** opens every change with filters.
+Everyone can set a name, username and profile picture under **Min profil**, and **Översikt → Senaste ändringar → Visa alla** opens every change with filters. Admins can clear old changes there (**Rensa logg**), and changes are deleted automatically after 1 year.
 
-1. **API:** merge `claude/profile-and-change-log` into `main` in **harpaviljongen-DB-API**. Nothing to add on Render: pictures go to the Cloudinary folder `admin-avatars` (set `CLOUDINARY_AVATAR_FOLDER` only if you want another name). The first start after this update logs `Activity log: removed the auto-delete index createdAt_1`: from now on the change log is kept instead of being deleted after 180 days.
+1. **API:** merge `claude/profile-and-change-log` into `main` in **harpaviljongen-DB-API**. Nothing to add on Render: pictures go to the Cloudinary folder `admin-avatars` (set `CLOUDINARY_AVATAR_FOLDER` only if you want another name). The first start after this update logs `Activity log: replaced index createdAt_1 (entries are now kept for 1 year)`: the change log used to be deleted after 180 days, now after 1 year.
 2. **Admin:** merge `claude/profile-and-change-log` into `main` in **harpaviljongen-admin-service**.
 
 The preview of the admin branch is at `https://claude-profile-and-change-log.harpaviljongen-admin-service.pages.dev` (it uses the live API, so try it after step 1).

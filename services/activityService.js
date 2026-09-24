@@ -51,10 +51,26 @@ export async function listActivity({ limit, before, from, to, category, userId }
 	if (category) filter.type = { $regex: `^${ACTIVITY_CATEGORIES[category]}\\.` };
 	if (userId) filter.userId = userId;
 
+	// Newest first by time; _id breaks ties. The next page starts after the entry
+	// with the id in `before` (or below that id if it has been deleted meanwhile).
+	let pageFilter = filter;
+	if (before) {
+		const last = await Activity.findById(before);
+		const after = last
+			? {
+					$or: [
+						{ createdAt: { $lt: last.createdAt } },
+						{ createdAt: last.createdAt, _id: { $lt: last._id } },
+					],
+				}
+			: { _id: { $lt: before } };
+		pageFilter = { $and: [filter, after] };
+	}
+
 	const [total, page] = await Promise.all([
 		Activity.countDocuments(filter),
-		Activity.find(before ? { ...filter, _id: { $lt: before } } : filter)
-			.sort({ _id: -1 })
+		Activity.find(pageFilter)
+			.sort({ createdAt: -1, _id: -1 })
 			.limit(limit + 1), // one extra tells whether there are more
 	]);
 
@@ -68,7 +84,7 @@ export async function listActivity({ limit, before, from, to, category, userId }
 // Everyone who appears in the log, for the user filter
 export async function listActivityUsers() {
 	const seen = await Activity.aggregate([
-		{ $sort: { _id: -1 } },
+		{ $sort: { createdAt: -1, _id: -1 } },
 		{ $group: { _id: '$userId', username: { $first: '$username' } } },
 	]);
 	const users = await User.find({ userId: { $in: seen.map((s) => s._id) } });

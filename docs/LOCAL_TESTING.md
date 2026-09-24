@@ -94,7 +94,7 @@ You should see `DB Connected` and `Server is running on port 7000`. Check:
 | **2. Öppettider** | `Update whole week` → 200 and all seven days back, Monday first. Empty `from`/`to` = closed. |
 | **3. Sidor** | `Update page settings` → 200. Only the values you send change. |
 | **4. Meny- & vinlista-PDF:er** | `Upload PDF`: in the **Body** tab click *Select files* on the `file` row and pick a PDF. `type`: `food` = Meny, `wine` = Vinlista. The new id is saved as `{{pdfId}}` for *Activate*, *Deactivate* and *Delete*. |
-| **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). `Senaste ändringar` lists who changed what, and the two `Ändringar:` requests show the filters. |
+| **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). `Senaste ändringar` lists who changed what, the `Ändringar:` requests show the filters, and one deletes entries older than 1 year (harmless: those are deleted automatically anyway). |
 | **6. Security checks** | All should return **401**. They prove that nobody can change anything without logging in. |
 | **7. Användare (bara admin)** | Needs an **admin** login. Creates a temporary employee, logs in as it, checks that it gets **403** on users but can change content, changes its own password, gets a new password from the admin (old tokens → **401**), changes its own name and username, uploads and removes a profile picture, finds its changes in the log, makes it admin and back, deletes it, and checks that its token stops working (**401**). Run the folder as a whole (it passes values between requests). It never touches your own account. For the picture upload, pick an image in its *Body* tab first; without one that test is skipped. |
 
@@ -167,6 +167,7 @@ Keep the admin and the website open side by side. After a change in the admin, *
 | **Min profil**: fill in *Namn*, change *Användarnamn*, **Spara** | The sidebar and *Hej, …!* use your first name. Log out and in with the new username (upper/lower case doesn't matter). |
 | **Översikt → Senaste ändringar → Visa alla** | *Alla ändringar*, grouped by day, 30 at a time (*Visa fler*). |
 | On *Alla ändringar*: *Datum* (Idag, Igår, 7/30 dagar, *Välj dag…*, *Välj period…*), *Kategori*, *Användare* | The list and the count follow the filters. Reload: the filters stay (they're in the address). *Rensa filter* resets. |
+| **Rensa logg** on *Alla ändringar* (admins only) | Shows how many changes are older than 30 days, 3 months, 6 months, 1 year, and in total. Pick one, confirm: they're gone and *Du tog bort … ur loggen* is at the top. *Allt* empties the log. Staff don't see the button. |
 | Stop the API (Ctrl+C) and reload the website | Navbar and buttons still work with the last settings it saw (the opening hours in the footer show an error until the API is back — same as today). |
 
 Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar, and *Användare* and *Logga ut* are behind your initial top right.

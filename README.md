@@ -449,6 +449,7 @@ Pages: `chambre`, `events`, `gallery`. Placements: `navbar`, `home`. Only the va
 GET /api/activity?limit=20&from=&to=&category=&userId=&before=   (token, any role)
 Response: ApiResponse<{ items: Activity[], total: number, hasMore: boolean }>
 GET /api/activity/users                                          (token) everyone in the log
+DELETE /api/activity?olderThan=30d|3m|6m|1y|all                  (admin) delete older entries
 ```
 
 - Newest first, max 100 per page. `before` = id of the last entry you have, for the next page.
@@ -456,7 +457,9 @@ GET /api/activity/users                                          (token) everyon
 - `category`: `menus`, `openingHours`, `pages`, `users`, `account`. `userId`: changes by one person.
 - `total` counts everything matching the filters. Each entry has `user: { name, avatarUrl, deleted }` with the person's current name and picture.
 
-Written automatically after each change made through the admin: PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), users created/role/new password/deleted, and your own username, name, picture and password. Entries are kept for good (a few hundred bytes each).
+Written automatically after each change made through the admin: PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), users created/role/new password/deleted, and your own username, name, picture and password.
+
+**Kept for 1 year.** MongoDB deletes entries automatically when they are 365 days old (a TTL index on `createdAt`, checked about once a minute; the API sets it up on startup). Admins can delete older entries sooner with `DELETE /api/activity?olderThan=…`: everything older than 30 days (`30d`), 3 months (`3m`), 6 months (`6m`), 1 year (`1y`), or everything (`all`). The response says how many were deleted, and the clearing itself is logged (`activity.clear`, category `log`) so you can see who did it.
 
 ### Opening Hours: whole week
 
