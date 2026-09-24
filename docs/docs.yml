@@ -366,7 +366,7 @@ components:
 
         Activity:
             type: object
-            description: One entry in the change log. Kept for good.
+            description: One entry in the change log. Deleted automatically after 1 year; admins can delete older entries sooner (DELETE /activity).
             properties:
                 id:
                     type: string
@@ -400,6 +400,7 @@ components:
                         - account.update
                         - account.avatar
                         - account.password
+                        - activity.clear
                     example: pdf.upload
                 username:
                     type: string
@@ -416,6 +417,7 @@ components:
                         - account.update: `{ username?: { from, to }, name?: { from, to } }`
                         - account.avatar: `{ action: added | changed | removed }`
                         - account.password: `{}`
+                        - activity.clear: `{ olderThan, deleted }`
                     example: { pdfType: food, title: 'Höstmeny 2026', activated: true }
                 createdAt:
                     type: string
@@ -1718,7 +1720,7 @@ paths:
                   name: category
                   schema:
                       type: string
-                      enum: [menus, openingHours, pages, users, account]
+                      enum: [menus, openingHours, pages, users, account, log]
                 - in: query
                   name: userId
                   description: Only changes made by this user
@@ -1754,6 +1756,27 @@ paths:
                     description: Bad date, category or before
                 '401':
                     description: Missing or invalid token
+        delete:
+            security:
+                - bearerAuth: []
+            tags:
+                - Site
+            summary: Delete old entries from the change log (admins only)
+            description: Deletes everything created before the cut-off (now minus 30 days, 3 months, 6 months or 1 year), or everything with `all`. The clearing itself is then logged as `activity.clear` (unless nothing was deleted). Entries older than 1 year are also deleted automatically.
+            parameters:
+                - in: query
+                  name: olderThan
+                  required: true
+                  schema:
+                      type: string
+                      enum: ['30d', '3m', '6m', '1y', all]
+            responses:
+                '200':
+                    description: 'data: { deleted }'
+                '400':
+                    description: Missing or unknown olderThan
+                '403':
+                    description: Logged in, but not an admin
 
     /activity/users:
         get:

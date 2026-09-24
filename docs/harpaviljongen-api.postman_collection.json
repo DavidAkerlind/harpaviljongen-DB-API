@@ -807,6 +807,41 @@
 					]
 				},
 				{
+					"name": "Ändringar: delete entries older than 1 year (admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?olderThan=1y",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "olderThan",
+									"value": "1y"
+								}
+							]
+						},
+						"description": "Admins only. olderThan: 30d, 3m, 6m, 1y or all. 1y is harmless: entries older than a year are deleted automatically anyway. Careful with 'all' on production."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Says how many', () => pm.expect(pm.response.json().data.deleted).to.be.a('number'));"
+								]
+							}
+						}
+					]
+				},
+				{
 					"name": "Health",
 					"request": {
 						"method": "GET",
@@ -1034,6 +1069,42 @@
 					]
 				},
 				{
+					"name": "Clear log without token → 401",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?olderThan=1y",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "olderThan",
+									"value": "1y"
+								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
 					"name": "Wrong password → 401",
 					"request": {
 						"method": "POST",
@@ -1230,6 +1301,49 @@
 							],
 							"path": [
 								"users"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{employeeToken}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 403', () => pm.response.to.have.status(403));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Employee clears the log → 403",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/activity?olderThan=1y",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"activity"
+							],
+							"query": [
+								{
+									"key": "olderThan",
+									"value": "1y"
+								}
 							]
 						},
 						"auth": {

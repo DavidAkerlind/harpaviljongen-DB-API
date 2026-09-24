@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
-import Activity, { ACTIVITY_CATEGORIES } from '../models/activity.js';
+import Activity, {
+	ACTIVITY_CATEGORIES,
+	RETENTION_SECONDS,
+	clearCutoff,
+} from '../models/activity.js';
 import User from '../models/user.js';
 
 // Called after a successful change. A failed log entry never fails the change itself.
@@ -83,17 +87,30 @@ export async function listActivityUsers() {
 		.sort((a, b) => a.name.localeCompare(b.name, 'sv'));
 }
 
-// The log used to be deleted after 180 days (a TTL index on createdAt). Remove that
-// index if it's there so entries are kept, then create the normal indexes.
+// Makes sure createdAt has the one-year auto-delete index. An older version had
+// 180 days, a later one none at all; an index with other options is replaced.
 export async function ensureActivityIndexes() {
 	const indexes = await Activity.collection.indexes().catch(() => []);
 	for (const index of indexes) {
-		if (index.expireAfterSeconds !== undefined) {
+		const onCreatedAt =
+			Object.keys(index.key).length === 1 && index.key.createdAt === 1;
+		if (onCreatedAt && index.expireAfterSeconds !== RETENTION_SECONDS) {
 			await Activity.collection.dropIndex(index.name);
-			console.log(`Activity log: removed the auto-delete index ${index.name}`);
+			console.log(
+				`Activity log: replaced index ${index.name} (entries are now kept for 1 year)`
+			);
 		}
 	}
 	await Activity.createIndexes();
+}
+
+// Deletes entries older than '30d', '3m', '6m', '1y', or 'all'. Returns how many.
+export async function clearActivity(olderThan) {
+	const cutoff = clearCutoff(olderThan);
+	const result = await Activity.deleteMany(
+		cutoff ? { createdAt: { $lt: cutoff } } : {}
+	);
+	return result.deletedCount;
 }
 
 export const isActivityId = (id) => mongoose.isValidObjectId(id);

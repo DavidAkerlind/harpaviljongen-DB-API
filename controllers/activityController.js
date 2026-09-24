@@ -1,6 +1,8 @@
-import { ACTIVITY_CATEGORIES } from '../models/activity.js';
+import { ACTIVITY_CATEGORIES, CLEAR_OPTIONS } from '../models/activity.js';
 import {
+	clearActivity,
 	isActivityId,
+	logActivity,
 	listActivity,
 	listActivityUsers,
 } from '../services/activityService.js';
@@ -58,5 +60,19 @@ export class ActivityController {
 	static async listUsers(req, res) {
 		const users = await listActivityUsers();
 		res.json(constructResObj(200, 'Users retrieved successfully', true, users));
+	}
+
+	// DELETE /api/activity?olderThan=30d|3m|6m|1y|all – admins only.
+	// The clearing itself is logged afterwards, so the log shows who emptied it.
+	static async clearActivity(req, res) {
+		const { olderThan } = req.query;
+		if (!CLEAR_OPTIONS.includes(olderThan)) {
+			return fail(res, `olderThan must be one of: ${CLEAR_OPTIONS.join(', ')}`);
+		}
+		const deleted = await clearActivity(olderThan);
+		if (deleted) await logActivity(req, 'activity.clear', { olderThan, deleted });
+		res.json(
+			constructResObj(200, `Deleted ${deleted} entries`, true, { deleted })
+		);
 	}
 }
