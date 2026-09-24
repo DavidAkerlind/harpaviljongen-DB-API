@@ -61,7 +61,8 @@ const allowedOrigins = [
 	'http://localhost:5173', // website (npm run dev)
 	'http://localhost:5174', // admin (npm run dev)
 	// + other local ports, and Cloudflare Pages previews:
-	// https://*.harpaviljongen.pages.dev, https://*.harpaviljongen-admin.pages.dev
+	'https://*.harpaviljongen.pages.dev', 
+	'https://*.harpaviljongen-admin.pages.dev'
 ];
 ```
 
