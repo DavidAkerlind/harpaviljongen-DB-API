@@ -3,35 +3,50 @@ import { constructResObj } from '../utils/constructResObj.js';
 import { v4 as uuid } from 'uuid';
 import { registerUser } from '../services/userService.js';
 
-import { comparePasswords, hashPassword } from '../utils/authUtil.js';
+import {
+	comparePasswords,
+	hashPassword,
+	isAuthConfigured,
+	signToken,
+} from '../utils/authUtil.js';
 
 export class AuthController {
 	static async login(req, res, next) {
 		try {
-			const { username, password } = req.body;
-			const user = await getUser(username);
-			if (user) {
-				const isSame = await comparePasswords(password, user.password);
-				if (isSame) {
-					res.json(
+			if (!isAuthConfigured()) {
+				return res
+					.status(500)
+					.json(
 						constructResObj(
-							200,
-							`User logged in successfully`,
-							true
+							500,
+							'JWT_SECRET is not set on the server',
+							false
 						)
 					);
-				} else {
-					next({
-						status: 400,
-						message: 'Username or password are incorrect',
-					});
-				}
-			} else {
-				next({
-					status: 400,
-					message: 'No user found',
+			}
+
+			const { username, password } = req.body;
+			const user = await getUser(username);
+			// Same message for unknown user and wrong password so usernames can't be probed
+			const isSame =
+				user && (await comparePasswords(password, user.password));
+			if (!isSame) {
+				return next({
+					status: 401,
+					message: 'Username or password are incorrect',
 				});
 			}
+
+			const token = signToken({
+				userId: user.userId,
+				username: user.username,
+			});
+			res.json(
+				constructResObj(200, `User logged in successfully`, true, {
+					token,
+					user: { username: user.username },
+				})
+			);
 		} catch (error) {
 			res.status(500).json(
 				constructResObj(500, 'Server error', false, error.message)
@@ -39,8 +54,17 @@ export class AuthController {
 		}
 	}
 
+	// The token lives in the client, so logout only confirms; the admin drops its copy
 	static async logout(req, res) {
 		res.json(constructResObj(200, 'User logged out successfully', true));
+	}
+
+	static async me(req, res) {
+		res.json(
+			constructResObj(200, 'Token is valid', true, {
+				user: { username: req.user.username },
+			})
+		);
 	}
 
 	static async register(req, res, next) {

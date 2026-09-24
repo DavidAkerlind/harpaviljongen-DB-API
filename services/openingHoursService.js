@@ -1,8 +1,21 @@
 import OpeningHour from '../models/openingHour.js';
 
+const DAY_ORDER = [
+	'Måndag',
+	'Tisdag',
+	'Onsdag',
+	'Torsdag',
+	'Fredag',
+	'Lördag',
+	'Söndag',
+];
+
 class OpeningHoursService {
 	async getAllOpeningHours() {
-		return await OpeningHour.find().sort({ dayOrder: 1 });
+		const hours = await OpeningHour.find();
+		return hours.sort(
+			(a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)
+		);
 	}
 
 	async updateOpeningHours(dayId, updates) {
@@ -39,6 +52,20 @@ class OpeningHoursService {
 			{ $set: updates },
 			{ new: true }
 		);
+	}
+
+	// Sparar hela veckan i ett anrop. Saknade dagar skapas.
+	async updateAllOpeningHours(days) {
+		await OpeningHour.bulkWrite(
+			days.map(({ day, hours }) => ({
+				updateOne: {
+					filter: { day },
+					update: { $set: { hours } },
+					upsert: true,
+				},
+			}))
+		);
+		return await this.getAllOpeningHours();
 	}
 
 	async createOpeningHours(data) {

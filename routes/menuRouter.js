@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { MenuController } from '../controllers/menuController.js';
 import { fallbackController } from '../services/fallbackService.js';
-import { authenticateUser } from '../middlewares/auth.js';
+import { protectWrites } from '../middlewares/auth.js';
 
 const router = Router();
-/* router.use(authenticateUser);*/
+// Reads are public, everything else needs a login token
+router.use(protectWrites);
 
 // GET routes
 router.get('/', MenuController.getAllMenus);

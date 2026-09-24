@@ -1,7 +1,11 @@
 openapi: 3.0.1
 info:
     title: Harpaviljongen API
-    description: API documentation for Harpaviljongen restaurant managing menus, opening hours, and events
+    description: |
+        API documentation for Harpaviljongen restaurant managing menus, opening hours, events, menu PDFs and site settings.
+
+        **Authentication:** all GET endpoints are public. Every POST, PUT, PATCH and DELETE needs a login token.
+        Call `POST /auth/login`, copy `data.token` from the response, click **Authorize** above and paste it.
     version: 1.0.0
     contact:
         name: API Support
@@ -13,6 +17,13 @@ servers:
       description: Development server
 
 components:
+    securitySchemes:
+        bearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: Token from POST /auth/login
+
     schemas:
         ApiResponse:
             type: object
@@ -281,6 +292,66 @@ components:
                     type: string
                     default: '/src/assets/pictures/event.png'
 
+        MenuPdf:
+            type: object
+            properties:
+                _id:
+                    type: string
+                    example: '6ab52937e69f242f1c0f69b6'
+                type:
+                    type: string
+                    enum: ['food', 'wine', 'lunch', 'drinks']
+                    description: 'food = Meny, wine = Vinlista on the website'
+                title:
+                    type: string
+                    example: 'Höstmeny 2026'
+                originalName:
+                    type: string
+                    example: 'meny-host.pdf'
+                bytes:
+                    type: number
+                    example: 245810
+                url:
+                    type: string
+                    example: 'https://res.cloudinary.com/<cloud>/image/upload/v1/menu-pdfs/food-1790257463874.pdf'
+                publicId:
+                    type: string
+                resourceType:
+                    type: string
+                    example: 'image'
+                uploadedAt:
+                    type: string
+                    format: date-time
+                isActive:
+                    type: boolean
+                    description: 'At most one active PDF per type. The active one is linked from the website.'
+
+        PageVisibility:
+            type: object
+            properties:
+                navbar:
+                    type: boolean
+                    description: Show the link in the navbar
+                home:
+                    type: boolean
+                    description: Show the button on the homepage
+
+        SiteSettings:
+            type: object
+            properties:
+                key:
+                    type: string
+                    example: 'main'
+                pages:
+                    type: object
+                    properties:
+                        chambre:
+                            $ref: '#/components/schemas/PageVisibility'
+                        events:
+                            $ref: '#/components/schemas/PageVisibility'
+                        gallery:
+                            $ref: '#/components/schemas/PageVisibility'
+
     responses:
         BadRequestError:
             description: Bad Request
@@ -358,6 +429,8 @@ paths:
                     $ref: '#/components/responses/ServerError'
 
         post:
+            security:
+                - bearerAuth: []
             tags:
                 - Menus
             summary: Create a new menu
@@ -475,6 +548,8 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
         post:
+            security:
+                - bearerAuth: []
             tags:
                 - Menus
             summary: Add menu item
@@ -520,6 +595,8 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
         post:
+            security:
+                - bearerAuth: []
             tags:
                 - Opening Hours
             summary: Create opening hours
@@ -558,8 +635,43 @@ paths:
                 '400':
                     $ref: '#/components/responses/BadRequestError'
 
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Opening Hours
+            summary: Update several days at once
+            description: |
+                Empty from and to means closed. Days that don't exist yet are created.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - days
+                            properties:
+                                days:
+                                    type: array
+                                    items:
+                                        $ref: '#/components/schemas/OpeningHours'
+                        example:
+                            days:
+                                - day: 'Måndag'
+                                  hours: { from: '', to: '' }
+                                - day: 'Torsdag'
+                                  hours: { from: '17:00', to: '00:00' }
+            responses:
+                '200':
+                    description: All opening hours after the update, Monday first
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+
     /openingHours/day/{day}:
         put:
+            security:
+                - bearerAuth: []
             tags:
                 - Opening Hours
             summary: Update opening hours by day
@@ -621,6 +733,8 @@ paths:
                                                   $ref: '#/components/schemas/Event'
 
         post:
+            security:
+                - bearerAuth: []
             tags:
                 - Events
             summary: Create event
@@ -661,6 +775,8 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
         put:
+            security:
+                - bearerAuth: []
             tags:
                 - Events
             summary: Update event
@@ -683,6 +799,8 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
         delete:
+            security:
+                - bearerAuth: []
             tags:
                 - Events
             summary: Delete event
@@ -712,7 +830,7 @@ paths:
                             $ref: '#/components/schemas/LoginRequest'
             responses:
                 '200':
-                    description: User logged in successfully
+                    description: User logged in successfully. Send data.token as `Authorization: Bearer <token>`.
                     content:
                         application/json:
                             schema:
@@ -724,7 +842,21 @@ paths:
                                     message:
                                         type: string
                                         example: 'User logged in successfully'
-                '400':
+                                    data:
+                                        type: object
+                                        properties:
+                                            token:
+                                                type: string
+                                                example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                                            user:
+                                                type: object
+                                                properties:
+                                                    username:
+                                                        type: string
+                                                        example: 'adminuser'
+                '429':
+                    description: Too many login attempts (max 10 per 15 minutes)
+                '401':
                     description: Invalid credentials
                     content:
                         application/json:
@@ -734,7 +866,7 @@ paths:
                                     - type: object
                                       properties:
                                           status:
-                                              example: 400
+                                              example: 401
                                           success:
                                               example: false
                                           message:
@@ -757,11 +889,27 @@ paths:
                                       properties:
                                           message:
                                               example: 'User logged out successfully'
-    /auth/register:
-        post:
+    /auth/me:
+        get:
+            security:
+                - bearerAuth: []
             tags:
                 - Authentication
-            summary: Register new user
+            summary: Check that a token is still valid
+            responses:
+                '200':
+                    description: Token is valid
+                '401':
+                    description: Missing, invalid or expired token
+
+    /auth/register:
+        post:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Register new user (only for a logged-in admin)
+            description: The first user is created from the command line with `npm run create-user -- <username> <password>`.
             requestBody:
                 required: true
                 content:
@@ -810,6 +958,8 @@ paths:
                 '404':
                     $ref: '#/components/responses/NotFoundError'
         put:
+            security:
+                - bearerAuth: []
             tags:
                 - WineList
             summary: Update entire wine list
@@ -848,6 +998,8 @@ paths:
 
     /wine-list/{id}/wine:
         post:
+            security:
+                - bearerAuth: []
             tags:
                 - WineList
             summary: Add new wine to wine list
@@ -896,6 +1048,8 @@ paths:
 
     /wine-list/{listId}/wine/{wineId}:
         put:
+            security:
+                - bearerAuth: []
             tags:
                 - WineList
             summary: Update wine (name, price, country, area)
@@ -943,6 +1097,8 @@ paths:
                     $ref: '#/components/responses/NotFoundError'
 
         delete:
+            security:
+                - bearerAuth: []
             tags:
                 - WineList
             summary: Delete wine by ID
@@ -972,6 +1128,8 @@ paths:
 
     /wine-list/{listId}/wine/{wineId}/toggle:
         patch:
+            security:
+                - bearerAuth: []
             tags:
                 - WineList
             summary: Toggle active on wine by ID
@@ -999,6 +1157,234 @@ paths:
                 '404':
                     $ref: '#/components/responses/NotFoundError'
 
+    # Menu PDFs (Meny & Vinlista)
+    /menu-pdfs:
+        get:
+            tags:
+                - Menu PDFs
+            summary: List uploaded PDFs, newest first
+            parameters:
+                - in: query
+                  name: type
+                  required: false
+                  schema:
+                      type: string
+                      enum: ['food', 'wine', 'lunch', 'drinks']
+            responses:
+                '200':
+                    description: List of PDFs (empty list when none)
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/MenuPdf'
+
+    /menu-pdfs/upload:
+        post:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Upload a PDF (max 10 MB)
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required:
+                                - file
+                                - type
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+                                type:
+                                    type: string
+                                    enum: ['food', 'wine', 'lunch', 'drinks']
+                                title:
+                                    type: string
+                                    description: Name shown in the admin. Defaults to the file name.
+                                activate:
+                                    type: boolean
+                                    default: false
+                                    description: Show it on the website right away
+            responses:
+                '201':
+                    description: PDF uploaded
+                '400':
+                    description: Missing/invalid file or type
+                '401':
+                    description: Missing or invalid token
+                '413':
+                    description: File larger than 10 MB
+
+    /menu-pdfs/active:
+        get:
+            tags:
+                - Menu PDFs
+            summary: Get the active PDF for a type
+            parameters:
+                - in: query
+                  name: type
+                  required: true
+                  schema:
+                      type: string
+                      enum: ['food', 'wine', 'lunch', 'drinks']
+            responses:
+                '200':
+                    description: The active PDF
+                '404':
+                    description: No active PDF for this type
+
+    /menu-pdfs/{id}/activate:
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Show this PDF on the website (turns off the previous one of the same type)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: PDF activated
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /menu-pdfs/{id}/deactivate:
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Stop showing this PDF (the website falls back to its placeholder PDF)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: PDF deactivated
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+
+    /menu-pdfs/{id}:
+        delete:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Delete a PDF (also removes the file from Cloudinary)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: PDF deleted
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+                '502':
+                    description: Cloudinary could not delete the file; nothing was removed
+
+    # Site settings (which pages are shown)
+    /site-settings:
+        get:
+            tags:
+                - Site
+            summary: Which pages are shown in the navbar and on the homepage
+            responses:
+                '200':
+                    description: Current settings (all hidden if never saved)
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/SiteSettings'
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Site
+            summary: Change one or more page switches (only the sent values change)
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                pages:
+                                    type: object
+                                    additionalProperties:
+                                        $ref: '#/components/schemas/PageVisibility'
+                        example:
+                            pages:
+                                chambre: { navbar: true, home: false }
+                                events: { home: true }
+            responses:
+                '200':
+                    description: Settings after the update
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+
+    /site-config:
+        get:
+            tags:
+                - Site
+            summary: Everything the public website needs in one call
+            description: Page switches plus the active Meny (food) and Vinlista (wine) PDF. A menu is null when no PDF is active.
+            responses:
+                '200':
+                    description: Site config
+                    content:
+                        application/json:
+                            example:
+                                status: 200
+                                success: true
+                                message: 'Site config retrieved successfully'
+                                data:
+                                    pages:
+                                        chambre: { navbar: true, home: false }
+                                        events: { navbar: false, home: false }
+                                        gallery: { navbar: false, home: false }
+                                    menus:
+                                        food:
+                                            url: 'https://res.cloudinary.com/<cloud>/image/upload/v1/menu-pdfs/food-1790257463874.pdf'
+                                            title: 'Höstmeny 2026'
+                                            uploadedAt: '2026-09-24T13:44:23.876Z'
+                                        wine: null
+
+    /health:
+        get:
+            tags:
+                - Site
+            summary: API and database status
+            responses:
+                '200':
+                    description: API and database are up
+                '503':
+                    description: API is up but the database is not connected
+
 tags:
     - name: Menus
       description: Menu management operations
@@ -1010,3 +1396,7 @@ tags:
       description: User authentication operations
     - name: WineList
       description: Wine list management operations
+    - name: Menu PDFs
+      description: Meny and Vinlista PDFs shown on the website
+    - name: Site
+      description: Page switches, site config and health
