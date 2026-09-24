@@ -8,7 +8,7 @@ This guide runs the **API**, the **admin** and the **public website** on your ow
 | Admin           | `harpaviljongen-admin-service`| http://localhost:5174            |
 | Public website  | `harpaviljongen`              | http://localhost:5173            |
 
-All three use the branch `claude/serene-fermat-05id5w`.
+Branches: the **API** and the **admin** use `claude/user-roles` (users and roles, upload card). The **website** has no changes for it, so use `main` there.
 
 The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit `.env` files in VS Code or another editor rather than creating them with `echo`, because PowerShell can save them in an encoding Node and Vite can't read.
 
@@ -35,7 +35,7 @@ The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit
 ```bash
 cd harpaviljongen-DB-API
 git fetch origin
-git checkout claude/serene-fermat-05id5w
+git checkout claude/user-roles
 npm install
 cp .env.example .env
 ```
@@ -63,9 +63,11 @@ Fill the empty test database and create a login:
 
 ```bash
 npm run seed                                       # 7 opening-hour days + page settings (never overwrites)
-node scripts/createUser.js adminuser testpassword123   # username ≥ 6 chars, password ≥ 8
+node scripts/createUser.js adminuser testpassword123   # an admin; username ≥ 3 chars, password ≥ 8
 npm run dev
 ```
+
+Users you created before this branch have no role. The API gives them `admin` when it starts (`Gave 1 existing user(s) the admin role` in the log).
 
 (`node scripts/createUser.js …` is the same as `npm run create-user -- …`, and avoids PowerShell swallowing the `--`.)
 
@@ -93,10 +95,11 @@ You should see `DB Connected` and `Server is running on port 7000`. Check:
 | **4. Meny- & vinlista-PDF:er** | `Upload PDF`: in the **Body** tab click *Select files* on the `file` row and pick a PDF. `type`: `food` = Meny, `wine` = Vinlista. The new id is saved as `{{pdfId}}` for *Activate*, *Deactivate* and *Delete*. |
 | **5. Hemsidan & status** | `Site config` shows exactly what the website will use: page switches + the active Meny/Vinlista link (`null` = placeholder PDF). |
 | **6. Security checks** | All should return **401**. They prove that nobody can change anything without logging in. |
+| **7. Användare (bara admin)** | Needs an **admin** login. Creates a temporary employee, logs in as it, checks that it gets **403** on users but can change content, makes it admin and back, deletes it, and checks that its token stops working (**401**). Run the folder as a whole (it passes values between requests). |
 
 You can also run everything at once: click the collection → **Run** (pick a PDF for the upload row first).
 
-> Login is limited to 10 attempts per 15 minutes per IP. If you get **429**, wait, or restart the API.
+> Login is limited to 10 **failed** attempts per 15 minutes per IP. If you get **429**, wait, or restart the API.
 
 > The **Production** environment points to the live API on Render. GET requests there are harmless, but POST/PUT/PATCH/DELETE **change the live website**.
 
@@ -107,7 +110,7 @@ You can also run everything at once: click the collection → **Run** (pick a PD
 ```bash
 cd harpaviljongen-admin-service
 git fetch origin
-git checkout claude/serene-fermat-05id5w
+git checkout claude/user-roles
 npm install
 cp .env.example .env.local     # points the admin to http://localhost:7000/api
 npm run dev
@@ -121,8 +124,8 @@ Open http://localhost:5174 and log in with the user from step 1.
 
 ```bash
 cd harpaviljongen
-git fetch origin
-git checkout claude/serene-fermat-05id5w
+git checkout main
+git pull
 npm install
 cp .env.example .env.local     # points the website to http://localhost:7000/api
 npm run dev
@@ -138,7 +141,8 @@ Keep the admin and the website open side by side. After a change in the admin, *
 
 | In the admin | Expected on the website |
 | --- | --- |
-| **Menyer → Meny → Ladda upp ny**, leave *Visa på hemsidan direkt* off | Nothing changes yet. The PDF shows up under *Alla uppladdade*. |
+| **Menyer → Meny →** the dashed **Ladda upp ny meny** card (first under *Alla uppladdade*), leave *Visa på hemsidan direkt* off | Nothing changes yet. The PDF shows up under *Alla uppladdade*. |
+| Drag a PDF from your desktop onto the dashed card | The upload dialog opens with that file and its name filled in. |
 | Click the PDF → preview → **Visa på hemsidan** | *Meny* in the navbar and the *MENY* button open that PDF. |
 | Upload another and activate it | The first one is no longer *Aktiv*; the website links to the new one. |
 | **Sluta visa** on the active one | *MENY* opens *Ny_meny_kommer_snart.pdf* again. |
@@ -149,9 +153,14 @@ Keep the admin and the website open side by side. After a change in the admin, *
 | **Sidor**: *Evenemang → Knapp på startsidan* on | An *EVENEMANG* button appears under MENY/VINLISTA. |
 | Switch them off again | They disappear. The pages still open with a direct link (`/chambre`, `/events`, `/gallery`). |
 | **Översikt** | Website, API and database are green and the cards show what is live. |
+| **Användare → Ny användare**, e.g. `anna` / `hemligt123`, *Personal* | Anna is listed as *Personal*. Log in as her in a private window: she can change menus, hours and pages, but has no *Användare*. |
+| **⋮ → Gör till admin** on Anna, then reload her window | She now has *Användare*. |
+| **⋮ → Ta bort** on an admin | Greyed out: only *Personal* can be deleted. Make them personal first. |
+| **⋮ → Ta bort** on Anna (as personal) | She disappears, and her open window is logged out on her next change. |
+| Your own row | Has no **⋮**: you can't change your own role or delete yourself. |
 | Stop the API (Ctrl+C) and reload the website | Navbar and buttons still work with the last settings it saw (the opening hours in the footer show an error until the API is back — same as today). |
 
-Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar.
+Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar, and *Användare* and *Logga ut* are behind your initial top right.
 
 ---
 

@@ -32,6 +32,7 @@ Backend API for Harpaviljongen restaurant managing:
 - Events and activities
 - Menu PDFs (Meny and Vinlista shown on the website)
 - Site settings (which pages are shown in the navbar and on the homepage)
+- Admin users with the roles `admin` and `employee`
 
 ### Base URLs
 
@@ -270,10 +271,10 @@ Response: ApiResponse<Event>
 ```http
 POST /api/auth/login
 Body: {
-    "username": string,  // Minimum 6 characters
-    "password": string   // Minimum 8 characters
+    "username": string,  // Not case sensitive
+    "password": string
 }
-Response: ApiResponse<{ token: string, user: { username: string } }>
+Response: ApiResponse<{ token: string, user: { userId: string, username: string, role: "admin" | "employee" } }>
 ```
 
 Send the token on every POST/PUT/PATCH/DELETE:
@@ -286,7 +287,7 @@ Authorization: Bearer <token>
 
 ```http
 GET /api/auth/me          (needs token)
-Response: ApiResponse<{ user: { username: string } }>
+Response: ApiResponse<{ user: { userId: string, username: string, role: "admin" | "employee" } }>
 ```
 
 #### Logout
@@ -296,13 +297,35 @@ GET /api/auth/logout
 Response: ApiResponse<null>
 ```
 
+### Users (admins only)
+
+```http
+GET    /api/users                  (admin) List users, admins first. Never includes passwords.
+POST   /api/users                  (admin) { "username": "anna", "password": "min-8-chars", "role": "employee" }
+PATCH  /api/users/{userId}         (admin) { "role": "admin" }  – not your own role
+DELETE /api/users/{userId}         (admin) Only employees, not yourself
+```
+
+| Role       | Can do                                                        |
+| ---------- | ------------------------------------------------------------- |
+| `admin`    | Everything, including `/api/users`                            |
+| `employee` | Menus, opening hours, pages (all writes except `/api/users`) |
+
+- Usernames: 3–30 characters (letters incl. å ä ö, numbers, `. _ -`), unique and not case sensitive. Passwords: 8–72 characters.
+- You can't change your own role or delete yourself, so there is always at least one admin.
+- To remove an admin, change the role to `employee` first.
+- Every token is checked against the database, so a deleted user is locked out right away and a role change applies immediately.
+- Users from before roles existed get `admin` when the API starts.
+
 ### User Model
 
 ```typescript
 interface User {
-	username: string; // Unique, min 6 chars
-	password: string; // Min 8 chars
-	userId: string; // Unique identifier
+	userId: string; // Unique identifier, used in /api/users/{userId}
+	username: string; // Unique (not case sensitive), 3–30 chars
+	password: string; // bcrypt hash, never returned
+	role: 'admin' | 'employee';
+	createdAt: Date; // null for users created before roles existed
 }
 ```
 
@@ -312,9 +335,9 @@ interface User {
 2. If they are correct, the API returns a signed JWT (valid `JWT_EXPIRES_IN`, default 12 h)
 3. The admin sends `Authorization: Bearer <token>` on every change
 4. **All GET endpoints are public. Every POST, PUT, PATCH and DELETE returns 401 without a valid token.**
-5. `POST /api/auth/register` also needs a token. The first user is created from the command line:
+5. `/api/users` (and `POST /api/auth/register`, which does the same as `POST /api/users`) also needs the role `admin` (403 otherwise). The first admin is created from the command line:
    `npm run create-user -- <username> <password>`
-6. Login is limited to 10 attempts per 15 minutes per IP (429 after that)
+6. Login is limited to 10 **failed** attempts per 15 minutes per IP (429 after that)
 
 ### Example Login Request
 
@@ -408,8 +431,10 @@ Empty `from` and `to` = closed.
 - 200: Success
 - 201: Created
 - 400: Bad Request
-- 401: Missing, invalid or expired token / wrong login
+- 401: Missing, invalid or expired token / wrong login / deleted account
+- 403: Logged in, but the role isn't allowed (e.g. an employee on `/api/users`)
 - 404: Not Found
+- 409: Username already exists
 - 413: PDF larger than 10 MB
 - 429: Too many login attempts
 - 500: Server Error
@@ -457,7 +482,7 @@ git clone https://github.com/DavidAkerlind/harpaviljongen-DB-API.git
 cd harpaviljongen-DB-API
 npm install
 npm run seed                                     # empty database: opening hours + page settings
-npm run create-user -- <username> <password>     # an admin login
+npm run create-user -- <username> <password>     # an admin login (add "employee" for a staff login)
 npm run dev
 ```
 

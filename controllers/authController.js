@@ -40,7 +40,11 @@ export class AuthController {
 			res.json(
 				constructResObj(200, `User logged in successfully`, true, {
 					token,
-					user: { username: user.username, role: user.role },
+					user: {
+						userId: user.userId,
+						username: user.username,
+						role: user.role,
+					},
 				})
 			);
 		} catch (error) {
@@ -58,7 +62,11 @@ export class AuthController {
 	static async me(req, res) {
 		res.json(
 			constructResObj(200, 'Token is valid', true, {
-				user: { username: req.user.username, role: req.user.role },
+				user: {
+					userId: req.user.userId,
+					username: req.user.username,
+					role: req.user.role,
+				},
 			})
 		);
 	}

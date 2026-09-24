@@ -54,8 +54,11 @@ Then run *Auth → Login* and *6. Security checks* in Postman with the **Product
 If you ever need a new admin user or a password reset, run this **locally**. It connects to the database in your `.env`, so point `CONNECTION_STRING` at production **only for this command**:
 
 ```bash
-npm run create-user -- <username> <password>
+npm run create-user -- <username> <password>             # new users become admin
+npm run create-user -- <username> <password> employee    # or a staff login
 ```
+
+(Once logged in as an admin, it's easier to add users in the admin under **Användare**.)
 
 ## 4. Put the admin on Cloudflare Pages
 
@@ -104,6 +107,20 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 -   GitHub → **harpaviljongen-admin-service → Settings → Pages** → unpublish, and delete the `gh-pages` branch.
 -   Later, remove `https://davidakerlind.github.io` from `allowedOrigins` in `middlewares/corsConfig.js`.
 -   Test PDFs from local testing are in the Cloudinary folder `menu-pdfs-dev` and can be deleted.
+
+---
+
+## Update: users and roles (branch `claude/user-roles`)
+
+Admins can add staff logins in the admin under **Användare**. Deploy in this order:
+
+1. **API:** merge `claude/user-roles` into `main` in **harpaviljongen-DB-API**. When Render starts it, every existing user gets the role `admin` (the log says `Gave N existing user(s) the admin role`). Nothing changes for the website or for logins.
+2. **Admin:** merge `claude/user-roles` into `main` in **harpaviljongen-admin-service**. Cloudflare deploys it.
+3. Log in to https://admin.harpaviljongen.com. **Användare** is in the sidebar (on a phone: tap your initial top right).
+
+If the admin were deployed before the API, it keeps working; the Användare page just doesn't show until the API knows about roles.
+
+Cloudflare builds a preview of the admin branch at `https://claude-user-roles.harpaviljongen-admin-service.pages.dev`. It uses the **live API**, so try it after step 1.
 
 ---
 

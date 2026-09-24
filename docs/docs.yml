@@ -880,6 +880,9 @@ paths:
                                             user:
                                                 type: object
                                                 properties:
+                                                    userId:
+                                                        type: string
+                                                        example: 'efe5a'
                                                     username:
                                                         type: string
                                                         example: 'adminuser'
@@ -929,7 +932,7 @@ paths:
             tags:
                 - Authentication
             summary: Check that a token is still valid
-            description: Returns `{ user: { username, role } }`. Also 401 if the account has been deleted.
+            description: Returns `{ user: { userId, username, role } }`. Also 401 if the account has been deleted.
             responses:
                 '200':
                     description: Token is valid
