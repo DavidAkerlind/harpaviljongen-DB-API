@@ -21,3 +21,12 @@ export function daysBetween(from, to) {
 	for (let day = from; day <= to; day = addDays(day, 1)) days.push(day);
 	return days;
 }
+
+const HOUR = 60 * 60 * 1000;
+
+// The moment a Stockholm day starts: 22:00 UTC the day before in summer, 23:00 in winter
+export function stockholmStart(day) {
+	const utc = Date.parse(`${day}T00:00:00Z`);
+	const summer = new Date(utc - 2 * HOUR);
+	return stockholmDay(summer) === day ? summer : new Date(utc - HOUR);
+}

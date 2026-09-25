@@ -1126,7 +1126,7 @@
 								}
 							]
 						},
-						"description": "Our own counting next to Cloudflare Web Analytics (cloudflare is null when not connected)."
+						"description": "Our own counting next to Cloudflare's traffic data (cloudflare is null when not connected)."
 					},
 					"event": [
 						{

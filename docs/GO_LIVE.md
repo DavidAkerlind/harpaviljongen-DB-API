@@ -110,10 +110,28 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 
 ---
 
+## Update: Cloudflare numbers from its traffic data (branch `claude/serene-fermat-05id5w`)
+
+The blue *Cloudflare* line on **Statistik** used to come from Cloudflare Web Analytics, which only counts browsers that run its script (not EU visitors with the EU option, not ad blockers). It now comes from Cloudflare's traffic data, the same data as the *Traffic overview* in Cloudflare, cleaned down to visits:
+
+- only `harpaviljongen.com` and `www.harpaviljongen.com` (not the admin or `*.pages.dev`)
+- only the website's pages: no images, scripts, `robots.txt` or the made-up addresses scanners try, such as `/.gcp/credentials.json`
+- no bots, and nothing from data centres (Google Cloud, Azure, AWS…), where the scanners that pretend to be browsers come from
+
+**Statistik** also gets a **Länder** tab (from Cloudflare). Cloudflare only sees a page being loaded, not clicks between pages on the website, so it shows fewer page views than our own counting; visits are comparable.
+
+Deploy: merge the branch into `main` in **harpaviljongen-DB-API** first, then in **harpaviljongen-admin-service**, then in **harpaviljongen**. Nothing to set up if `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are already on Render: the same token works. `CLOUDFLARE_SITE_TAG` isn't used any more and can be removed. Web Analytics isn't needed any more either: under **Web Analytics → Manage site** you can choose **Disable**, or leave it.
+
+The first time **Statistik** is opened, the API fetches the days Cloudflare still has (how far back depends on the Cloudflare plan) and from then on saves every finished day (`cloudflaredays`, counters only, deleted after 400 days). Older days show no blue line.
+
+If Cloudflare answers with an error at the bottom of **Statistik**, reading the whole account may not be allowed on your plan. Use the zone instead: Cloudflare → **harpaviljongen.com** → **Overview** → *API* → copy the **Zone ID** into `CLOUDFLARE_ZONE_ID` on Render, and add the permission **Zone** · **Analytics** · **Read** (*Zone Resources*: harpaviljongen.com) to the token.
+
+---
+
 ## Update: dashboard widgets, statistics and new menus (branch `claude/serene-fermat-05id5w`)
 
 - **Översikt** is made of widgets. **Anpassa** lets everyone add, remove, resize and drag them; the layout is saved on their account.
-- **Statistik** (sidebar; on a phone under **Mer**) shows visits and page views: our own counting plus Cloudflare Web Analytics when connected.
+- **Statistik** (sidebar; on a phone under **Mer**) shows visits and page views: our own counting plus Cloudflare's when connected.
 - **Menyer → Ny meny** creates more menus (e.g. Lunchmeny) with their own buttons on the website. **Inställningar** on each menu renames it or hides its buttons.
 - **Logg** is its own item in the sidebar (old links to `/andringar` still work). **Användare** has a "Lägg till användare" row at the bottom of the list.
 
@@ -122,19 +140,16 @@ Deploy in this order (each step keeps the live site working):
 1. **API:** merge the branch into `main` in **harpaviljongen-DB-API**. On startup it creates the menus Meny and Vinlista (nothing to do). The website and the current admin keep working as before.
 2. **Admin:** merge the branch into `main` in **harpaviljongen-admin-service**.
 3. **Website:** merge the branch into `main` in **harpaviljongen**. From then on page views are counted, and new menus get buttons. Check it: open harpaviljongen.com, then **Statistik** in the admin a minute later. (A browser with an ad blocker may not be counted, so try a normal one if you see nothing.)
-4. **Optional, Cloudflare Web Analytics** (the second, blue line in the charts):
+4. **Optional, Cloudflare** (the second, blue line in the charts, from Cloudflare's traffic data, see the update above):
 
     (Cloudflare renames menus now and then; the words below may differ slightly.)
 
-    1. Cloudflare → **Analytics & Logs** → **Web Analytics** → **harpaviljongen.com** → **Manage site** → *Real User Measurements (RUM)*: choose **Enable** (*The JS Snippet will be automatically injected*). **Not** *Enable, excluding visitor data in the EU*: Sweden is in the EU, so that would leave out almost every visitor. Cloudflare collects data from then on; the first numbers show after a few minutes.
-    2. Your **account ID**: the Cloudflare account home page → the **⋯** next to the account name → **Copy account ID** (it is also in the address: `dash.cloudflare.com/<account id>/…`).
-    3. An **API token**: **My Profile** (top right) → **API Tokens** → **Create Token** → **Create Custom Token** → *Permissions*: **Account** · **Account Analytics** · **Read**; *Account Resources*: **Include** · your account → **Continue to summary** → **Create Token**. Copy it (it is only shown once).
-    4. Render → the API service → **Environment**: add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and save (Render restarts the API).
-    5. Open **Statistik** in the admin. The blue *Cloudflare* line shows up; if Cloudflare says something is wrong, its message is shown at the bottom of the page.
+    1. Your **account ID**: the Cloudflare account home page → the **⋯** next to the account name → **Copy account ID** (it is also in the address: `dash.cloudflare.com/<account id>/…`).
+    2. An **API token**: **My Profile** (top right) → **API Tokens** → **Create Token** → **Create Custom Token** → *Permissions*: **Account** · **Account Analytics** · **Read**; *Account Resources*: **Include** · your account → **Continue to summary** → **Create Token**. Copy it (it is only shown once).
+    3. Render → the API service → **Environment**: add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and save (Render restarts the API).
+    4. Open **Statistik** in the admin. The blue *Cloudflare* line shows up; if Cloudflare says something is wrong, its message is shown at the bottom of the page.
 
-    No site tag is needed: the API finds the website's numbers by its address (`harpaviljongen.com` and `www.harpaviljongen.com`). Only if you want to point it at one specific Web Analytics site: open that site's dashboard under **Web Analytics**; the address bar then contains `siteTag~in=` followed by 32 characters. Put those in `CLOUDFLARE_SITE_TAG` on Render.
-
-Our own counting uses no cookies and stores no IP addresses, so it needs no cookie banner. Cloudflare Web Analytics is cookie-free too.
+Our own counting uses no cookies and stores no IP addresses, so it needs no cookie banner. Cloudflare's numbers come from traffic it already handles; the API only saves counters per day.
 
 ## Update: profile and all changes (branch `claude/profile-and-change-log`)
 
