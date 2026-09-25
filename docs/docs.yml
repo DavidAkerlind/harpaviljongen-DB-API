@@ -394,38 +394,39 @@ components:
 
         Analytics:
             type: object
-            description: Our own page-view counting next to Cloudflare Web Analytics (cloudflare values are null when it isn't connected)
+            description: Our own page-view counting next to Cloudflare's traffic data for the website, without bots and data centres (cloudflare values are null when CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID aren't set)
             properties:
                 range:
                     type: object
                     example: { key: 7d, from: '2026-09-19', to: '2026-09-25', days: 7 }
                 series:
                     type: array
-                    description: One entry per day
+                    description: One entry per day (Stockholm time). cloudflare is null on days Cloudflare no longer has.
                     items:
                         type: object
                         example:
                             date: '2026-09-25'
                             own: { views: 64, visits: 39 }
-                            cloudflare: { views: 100, visits: 62 }
+                            cloudflare: { views: 41, visits: 33 }
                 totals:
                     type: object
                     example:
                         own: { views: 412, visits: 259 }
                         ownPrevious: { views: 380, visits: 241 }
-                        cloudflare: { views: 498, visits: 308 }
+                        cloudflare: { views: 280, visits: 221 }
                 breakdown:
                     type: object
-                    description: Pages and devices by page views, referrers by visits; the biggest first
+                    description: Pages, devices and countries by page views, referrers by visits; the biggest first. A source that doesn't count something is null on every row (referrers are only our own, countries only Cloudflare's).
                     example:
-                        pages: [{ key: '/', own: 255, cloudflare: 274 }]
-                        referrers: [{ key: '(direct)', own: 122, cloudflare: 149 }]
-                        devices: [{ key: mobile, own: 290, cloudflare: 339 }]
+                        pages: [{ key: '/', own: 255, cloudflare: 190 }]
+                        referrers: [{ key: '(direct)', own: 122, cloudflare: null }]
+                        devices: [{ key: mobile, own: 290, cloudflare: 196 }]
+                        countries: [{ key: SE, own: null, cloudflare: 231 }]
                 sources:
                     type: object
                     example:
                         own: { since: '2026-09-06' }
-                        cloudflare: { status: ok }
+                        cloudflare: { status: ok, since: '2026-08-26' }
 
         Activity:
             type: object
@@ -2067,11 +2068,26 @@ paths:
                                         $ref: '#/components/schemas/Analytics'
                 '400':
                     description: Unknown range
+    /site-config/seen:
+        post:
+            tags:
+                - Statistics
+            summary: Count one page view (what the website sends)
+            description: The same as POST /analytics/hit, at an address ad blockers don't block. Always 204.
+            requestBody:
+                content:
+                    text/plain:
+                        example: '{"p":"/events","r":"https://www.google.com/"}'
+            responses:
+                '204':
+                    description: Always (counted or ignored)
+                '429':
+                    description: Too many page views from this IP address
     /analytics/hit:
         post:
             tags:
                 - Statistics
-            summary: Count one page view (sent by the website)
+            summary: Count one page view (older address, the website uses /site-config/seen)
             description: |
                 Public. Sent with navigator.sendBeacon as text/plain (JSON also works). No cookies and no IP addresses are stored.
                 A visit = a page view whose referrer isn't the site itself. Bots and invalid paths are ignored; at most 100 per IP address per 10 minutes.
@@ -2145,4 +2161,4 @@ tags:
     - name: Site
       description: Page switches, site config, latest changes and health
     - name: Statistics
-      description: Page views counted by the website, next to Cloudflare Web Analytics
+      description: Page views counted by the website, next to Cloudflare's traffic data

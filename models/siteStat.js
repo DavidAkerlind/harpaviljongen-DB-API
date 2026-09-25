@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 //   kind 'referrer' key 'google.com'         – where a visit came from, '(direct)' when unknown
 //   kind 'device'   key 'mobile'             – mobile, tablet or desktop
 // views = page views. visits = page views that did not come from another page on the
-// site (the same definition as Cloudflare Web Analytics, so the two can be compared).
+// site (the same definition as Cloudflare's, so the two can be compared).
 
 export const STAT_KINDS = ['total', 'page', 'referrer', 'device'];
 export const STAT_RETENTION_DAYS = 400; // a bit over a year, so a year can be compared

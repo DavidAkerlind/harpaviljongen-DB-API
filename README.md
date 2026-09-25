@@ -477,14 +477,17 @@ Written automatically after each change made through the admin: menus created/ch
 ### Statistics (Statistik in the admin)
 
 ```http
-POST /api/analytics/hit                   (public) { "p": "/events", "r": "https://www.google.com/" } – sent by the website, always 204
+POST /api/site-config/seen                (public) { "p": "/events", "r": "https://www.google.com/" } – sent by the website, always 204
+POST /api/analytics/hit                   (public) the same; the website doesn't use it since ad blockers block /analytics/
 GET  /api/analytics?range=7d|30d|90d      (token, any role) our own numbers and Cloudflare's side by side
 PUT  /api/auth/dashboard                  (token) { "widgets": [{ "id": "visitors", "size": "medium" }] } your own Översikt layout, null = standard
 ```
 
-The website counts every page view itself: only the path and the page the visitor came from are sent. No cookies, no IP addresses and nothing that identifies a visitor is stored, only counters per day (Stockholm time): page views and visits in total, per page, per referrer and per device type (`sitestats`, deleted after 400 days). A **visit** is a page view that didn't come from another page on the site, the same definition as Cloudflare Web Analytics. Bots are not counted, one IP address can count at most 100 page views per 10 minutes, and at most 60 different pages and 100 referrers are kept per day (the rest count as `(other)`), so made-up hits can't fill the database.
+The website counts every page view itself: only the path and the page the visitor came from are sent. No cookies, no IP addresses and nothing that identifies a visitor is stored, only counters per day (Stockholm time): page views and visits in total, per page, per referrer and per device type (`sitestats`, deleted after 400 days). A **visit** is a page view that didn't come from another page on the site, the same definition as Cloudflare's. Bots are not counted, one IP address can count at most 100 page views per 10 minutes, and at most 60 different pages and 100 referrers are kept per day (the rest count as `(other)`), so made-up hits can't fill the database.
 
-`GET /api/analytics` returns `series` (per day: `own` and `cloudflare` `{ views, visits }`), `totals` (with `ownPrevious` for the period before), `breakdown` (`pages`, `referrers`, `devices`: `[{ key, own, cloudflare }]`) and `sources` (`own.since`, `cloudflare.status`: `ok`, `off` or `error`). Cloudflare is optional, see *Environment Variables*; `cloudflare` is `null` when it isn't connected. Cloudflare's days are UTC days.
+`GET /api/analytics` returns `series` (per day: `own` and `cloudflare` `{ views, visits }`), `totals` (with `ownPrevious` for the period before), `breakdown` (`pages`, `referrers`, `devices`, `countries`: `[{ key, own, cloudflare }]`) and `sources` (`own.since`, `cloudflare.status`: `ok`, `off` or `error`, and `cloudflare.since`). Cloudflare is optional, see *Environment Variables*; `cloudflare` is `null` when it isn't connected, and on days Cloudflare no longer has. A source that doesn't count something is `null` on every row: `referrers` are only our own (Cloudflare's free plan doesn't tell), `countries` only Cloudflare's (codes like `SE`).
+
+Cloudflare's numbers come from its traffic data for the website (`services/cloudflareAnalytics.js`): page loads of the website's pages on `harpaviljongen.com` and `www.`, answered 200 or 304, without bots (by user agent) and without data centres such as Google Cloud, Azure and AWS (by network), where scanners come from. Cloudflare only sees pages being loaded, not clicks between pages in the browser, so its page views are fewer than ours. Finished days (Stockholm time) are saved as counters in `cloudflaredays` (deleted after 400 days), so they stay after Cloudflare stops keeping them. When the website gets a new page, add it to `PAGES` in that file.
 
 ### Opening Hours: whole week
 
@@ -543,10 +546,11 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=menu-pdfs
 CLOUDINARY_AVATAR_FOLDER=admin-avatars
-# Optional: Cloudflare Web Analytics next to our own numbers (see docs/GO_LIVE.md)
+# Optional: Cloudflare's traffic numbers next to our own (see docs/GO_LIVE.md)
 CLOUDFLARE_API_TOKEN=
 CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_SITE_TAG=
+# CLOUDFLARE_SITE_HOSTS=harpaviljongen.com,www.harpaviljongen.com   (default)
+# CLOUDFLARE_ZONE_ID=                            (read the zone instead of the whole account)
 ```
 
 Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`, `CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).

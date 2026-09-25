@@ -1,21 +1,13 @@
 import SiteStat from '../models/siteStat.js';
 import { getCloudflareStats, normalizePath } from './cloudflareAnalytics.js';
 import { addDays, daysBetween, stockholmDay } from '../utils/days.js';
+import { deviceType, isBot } from '../utils/userAgent.js';
 
 export const ANALYTICS_RANGES = { '7d': 7, '30d': 30, '90d': 90 };
 const TOP = 8;
 
-const BOT = /bot|crawl|spider|slurp|facebookexternalhit|embedly|preview|headless|lighthouse|pingdom|uptime|monitor|curl|wget|python|axios|node-fetch/i;
 const PATH = /^\/[\w\-./~%]*$/;
 const MAX_PATH = 120;
-
-export const isBot = (userAgent = '') => !userAgent || BOT.test(userAgent);
-
-export function deviceType(userAgent = '') {
-	if (/iPad|Tablet|PlayBook|Silk|Android(?!.*Mobile)/i.test(userAgent)) return 'tablet';
-	if (/Mobi|iPhone|iPod|Android|Windows Phone/i.test(userAgent)) return 'mobile';
-	return 'desktop';
-}
 
 const hostOf = (url) => {
 	try {
@@ -107,16 +99,18 @@ async function ownBreakdown(from, to) {
 	return maps;
 }
 
-// Both sources side by side, the biggest first: [{ key, own, cloudflare }]
+// Both sources side by side, the biggest first: [{ key, own, cloudflare }]. A source that
+// doesn't count this (null) is null on every row.
 function merge(own, cloudflare, limit = TOP) {
-	const keys = new Set([...own.keys(), ...(cloudflare?.keys() ?? [])]);
+	const keys = new Set([...(own?.keys() ?? []), ...(cloudflare?.keys() ?? [])]);
+	const biggest = (row) => Math.max(row.own ?? 0, row.cloudflare ?? 0);
 	return [...keys]
 		.map((key) => ({
 			key,
-			own: own.get(key) ?? 0,
+			own: own ? (own.get(key) ?? 0) : null,
 			cloudflare: cloudflare ? (cloudflare.get(key) ?? 0) : null,
 		}))
-		.sort((a, b) => Math.max(b.own, b.cloudflare ?? 0) - Math.max(a.own, a.cloudflare ?? 0))
+		.sort((a, b) => biggest(b) - biggest(a))
 		.slice(0, limit);
 }
 
@@ -152,25 +146,29 @@ export async function getAnalytics(rangeKey, now = new Date()) {
 		range: { key: rangeKey, from, to, days: length },
 		series: daysBetween(from, to).map((date) => {
 			const own = ownByDay.get(date);
-			const theirs = cf?.days.get(date);
 			return {
 				date,
 				own: { views: own?.views ?? 0, visits: own?.visits ?? 0 },
-				cloudflare: cf ? { views: theirs?.views ?? 0, visits: theirs?.visits ?? 0 } : null,
+				// null: Cloudflare not connected, or a day it no longer has
+				cloudflare: cf?.days.get(date) ?? null,
 			};
 		}),
 		totals: { own: totals, ownPrevious: previous, cloudflare: cfTotals },
+		// Cloudflare's free plan doesn't tell where visits came from, and we don't know countries
 		breakdown: {
 			pages: merge(breakdown.page, cf?.pages),
-			referrers: merge(breakdown.referrer, cf?.referrers),
+			referrers: merge(breakdown.referrer, null),
 			devices: merge(breakdown.device, cf?.devices, 5),
+			countries: cf ? merge(null, cf.countries) : [],
 		},
 		sources: {
 			own: { since: first?.day ?? null },
 			cloudflare:
 				cloudflare.status === 'error'
 					? { status: 'error', message: cloudflare.message }
-					: { status: cloudflare.status },
+					: cloudflare.status === 'ok'
+						? { status: 'ok', since: cloudflare.since }
+						: { status: cloudflare.status },
 		},
 	};
 }
