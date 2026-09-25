@@ -4,14 +4,23 @@ import {
 	isPdfBuffer,
 	uploadToCloudinary,
 } from '../services/cloudinaryService.js';
-import MenuPdf, { PDF_TYPES } from '../models/MenuPdf.js';
+import MenuPdf from '../models/MenuPdf.js';
+import MenuList from '../models/menuList.js';
+import { getMenuList } from '../services/menuListService.js';
 import { logActivity } from '../services/activityService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 
 const MAX_TITLE = 100;
-const pdfDetails = (pdf) => ({ pdfType: pdf.type, title: pdf.title });
+// menuLabel is saved so the log still reads right after the menu is renamed or deleted
+const pdfDetails = async (pdf) => ({
+	pdfType: pdf.type,
+	menuLabel: (await getMenuList(pdf.type))?.label ?? null,
+	title: pdf.title,
+});
 
-const invalidTypeMessage = `Invalid type. Must be one of: ${PDF_TYPES.join(', ')}`;
+const invalidTypeMessage = 'Invalid type. Must be the type of a menu, see GET /api/menu-lists';
+const isMenuType = async (type) =>
+	typeof type === 'string' && Boolean(await MenuList.exists({ type }));
 
 // Multipart form fields always arrive as strings
 const isTruthy = (value) => value === true || value === 'true' || value === '1';
@@ -46,7 +55,7 @@ export class MenuPdfController {
 					.json(constructResObj(400, 'Menu type is required', false));
 			}
 
-			if (!PDF_TYPES.includes(type)) {
+			if (!(await isMenuType(type))) {
 				return res
 					.status(400)
 					.json(constructResObj(400, invalidTypeMessage, false));
@@ -91,7 +100,7 @@ export class MenuPdfController {
 				isActive: activate,
 			});
 			await logActivity(req, 'pdf.upload', {
-				...pdfDetails(newPdf),
+				...(await pdfDetails(newPdf)),
 				activated: activate,
 			});
 
@@ -121,7 +130,7 @@ export class MenuPdfController {
 					);
 			}
 
-			if (!PDF_TYPES.includes(type)) {
+			if (!(await isMenuType(type))) {
 				return res
 					.status(400)
 					.json(constructResObj(400, invalidTypeMessage, false));
@@ -160,7 +169,7 @@ export class MenuPdfController {
 	static async getAllPdfs(req, res) {
 		try {
 			const { type } = req.query;
-			if (type && !PDF_TYPES.includes(type)) {
+			if (type && !(await isMenuType(type))) {
 				return res
 					.status(400)
 					.json(constructResObj(400, invalidTypeMessage, false));
@@ -193,7 +202,7 @@ export class MenuPdfController {
 			const wasActive = pdf.isActive;
 			pdf.isActive = true;
 			await pdf.save();
-			if (!wasActive) await logActivity(req, 'pdf.activate', pdfDetails(pdf));
+			if (!wasActive) await logActivity(req, 'pdf.activate', await pdfDetails(pdf));
 
 			res.json(
 				constructResObj(200, 'PDF activated successfully', true, pdf),
@@ -214,7 +223,7 @@ export class MenuPdfController {
 			const wasActive = pdf.isActive;
 			pdf.isActive = false;
 			await pdf.save();
-			if (wasActive) await logActivity(req, 'pdf.deactivate', pdfDetails(pdf));
+			if (wasActive) await logActivity(req, 'pdf.deactivate', await pdfDetails(pdf));
 
 			res.json(
 				constructResObj(200, 'PDF deactivated successfully', true, pdf),
@@ -249,7 +258,7 @@ export class MenuPdfController {
 			if (from !== title) {
 				pdf.title = title;
 				await pdf.save();
-				await logActivity(req, 'pdf.rename', { ...pdfDetails(pdf), from });
+				await logActivity(req, 'pdf.rename', { ...(await pdfDetails(pdf)), from });
 			}
 
 			res.json(constructResObj(200, 'PDF renamed successfully', true, pdf));
@@ -282,7 +291,7 @@ export class MenuPdfController {
 
 			await MenuPdf.findByIdAndDelete(pdf._id);
 			await logActivity(req, 'pdf.delete', {
-				...pdfDetails(pdf),
+				...(await pdfDetails(pdf)),
 				wasActive: pdf.isActive,
 			});
 

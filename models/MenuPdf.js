@@ -1,11 +1,9 @@
 import mongoose from 'mongoose';
 
-export const PDF_TYPES = ['food', 'wine', 'lunch', 'drinks'];
-
 const MenuPdfSchema = new mongoose.Schema({
+	// The menu it belongs to (MenuList.type), e.g. 'food', 'wine' or 'lunchmeny'
 	type: {
 		type: String,
-		enum: PDF_TYPES,
 		required: true,
 	},
 	// Namn som visas i admin, t.ex. "Höstmeny 2026"

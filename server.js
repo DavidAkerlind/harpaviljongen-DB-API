@@ -10,6 +10,8 @@ import siteSettingsRouter from './routes/siteSettingsRouter.js';
 import siteConfigRouter from './routes/siteConfigRouter.js';
 import userRouter from './routes/userRouter.js';
 import activityRouter from './routes/activityRouter.js';
+import menuListRouter from './routes/menuListRouter.js';
+import analyticsRouter from './routes/analyticsRouter.js';
 // Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -19,6 +21,7 @@ import logger from './middlewares/logger.js';
 import errorHandler from './middlewares/errorHandler.js';
 import { ensureUserRoles } from './services/userService.js';
 import { ensureActivityIndexes } from './services/activityService.js';
+import { ensureMenuLists } from './services/menuListService.js';
 // Swagger import
 import swaggerUi from 'swagger-ui-express';
 import YAML from 'yamljs';
@@ -54,6 +57,8 @@ app.use('/api/site-settings', siteSettingsRouter);
 app.use('/api/site-config', siteConfigRouter);
 app.use('/api/users', userRouter);
 app.use('/api/activity', activityRouter);
+app.use('/api/menu-lists', menuListRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // Health check for the admin's status view
 app.get('/api/health', (req, res) => {
@@ -86,6 +91,12 @@ database.once('connected', async () => {
 		await ensureActivityIndexes();
 	} catch (error) {
 		console.log('Could not update the activity log indexes:', error.message);
+	}
+	try {
+		const added = await ensureMenuLists();
+		if (added) console.log(`Created ${added} menu(s) for PDFs without one`);
+	} catch (error) {
+		console.log('Could not set up the menus:', error.message);
 	}
 	// Start server
 	app.listen(PORT, () => {

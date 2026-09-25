@@ -18,6 +18,10 @@ router.get('/me', authenticateUser, AuthController.me);
 // PATCH me – ditt eget användarnamn och namn, { "username": "anna", "name": "Anna Svensson" }
 router.patch('/me', authenticateUser, AuthController.updateMe);
 
+// PUT dashboard – dina widgets på Översikt, { "widgets": [{ "id": "visitors", "size": "medium" }] }
+// or { "widgets": null } for the standard layout
+router.put('/dashboard', authenticateUser, AuthController.saveDashboard);
+
 // PUT / DELETE avatar – profilbild (multipart "file": JPG, PNG eller WebP, max 5 MB)
 // authenticateUser runs first so files from someone not logged in are never read
 router.put(

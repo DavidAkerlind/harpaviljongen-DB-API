@@ -50,6 +50,10 @@
 		{
 			"key": "todayStart",
 			"value": ""
+		},
+		{
+			"key": "menuType",
+			"value": ""
 		}
 	],
 	"item": [
@@ -153,6 +157,93 @@
 							"type": "noauth"
 						}
 					}
+				},
+				{
+					"name": "Save my Översikt layout",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"dashboard"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"widgets\": [\n    {\n      \"id\": \"visitors\",\n      \"size\": \"medium\"\n    },\n    {\n      \"id\": \"hours\",\n      \"size\": \"small\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "The widgets on your own Översikt, in order. Sizes: small, medium, large."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Layout saved', () => pm.expect(pm.response.json().data.user.dashboard.map((w) => w.id)).to.eql(['visitors', 'hours']));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Back to the standard layout",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"dashboard"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"widgets\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('No saved layout', () => pm.expect(pm.response.json().data.user.dashboard).to.eql(null));"
+								]
+							}
+						}
+					]
 				}
 			]
 		},
@@ -354,8 +445,182 @@
 			]
 		},
 		{
-			"name": "4. Meny- & vinlista-PDF:er",
+			"name": "4. Menyer & PDF:er",
 			"item": [
+				{
+					"name": "List menus",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-lists",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-lists"
+							]
+						},
+						"description": "Meny (food), Vinlista (wine) and the menus created in the admin, in order."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Meny and Vinlista exist', () => { const types = pm.response.json().data.map((m) => m.type); pm.expect(types).to.include.members(['food', 'wine']); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Create menu",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/menu-lists",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-lists"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"label\": \"Postman-meny {{$timestamp}}\",\n  \"navbar\": true,\n  \"home\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "Gets a type made from the name. Its button shows on the website once one of its PDFs is active."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', () => pm.response.to.have.status(201));",
+									"const menu = pm.response.json().data;",
+									"pm.collectionVariables.set('menuType', menu.type);",
+									"pm.test('Not built in', () => pm.expect(menu.builtIn).to.eql(false));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Rename menu / hide its button",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/menu-lists/{{menuType}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-lists",
+								"{{menuType}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"label\": \"Postman-meny (ändrad) {{$timestamp}}\",\n  \"navbar\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Button hidden in the navbar', () => pm.expect(pm.response.json().data.navbar).to.eql(false));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete Meny → 400",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-lists/food",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-lists",
+								"food"
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 400', () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Delete menu (and its PDFs)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/menu-lists/{{menuType}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-lists",
+								"{{menuType}}"
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"pm.test('Gone', () => pm.expect(pm.response.json().data.type).to.eql(pm.collectionVariables.get('menuType')));"
+								]
+							}
+						}
+					]
+				},
 				{
 					"name": "List food PDFs (Meny)",
 					"request": {
@@ -707,11 +972,11 @@
 								"type": "text/javascript",
 								"exec": [
 									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
-									"const data = pm.response.json().data;",
+									"const latest = pm.response.json().data;",
 									"pm.test('items, total and hasMore', () => {",
-									"    pm.expect(data.items).to.be.an('array');",
-									"    pm.expect(data.total).to.be.a('number');",
-									"    pm.expect(data.hasMore).to.be.a('boolean');",
+									"    pm.expect(latest.items).to.be.an('array');",
+									"    pm.expect(latest.total).to.be.a('number');",
+									"    pm.expect(latest.hasMore).to.be.a('boolean');",
 									"});"
 								]
 							}
@@ -765,10 +1030,10 @@
 								"type": "text/javascript",
 								"exec": [
 									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
-									"pm.test('Only PDF changes from today', () => {",
+									"pm.test('Only menu and PDF changes from today', () => {",
 									"    const since = new Date(pm.collectionVariables.get('todayStart'));",
 									"    for (const item of pm.response.json().data.items) {",
-									"        pm.expect(item.type).to.match(/^pdf\\./);",
+									"        pm.expect(item.type).to.match(/^(pdf|menu)\\./);",
 									"        pm.expect(new Date(item.createdAt) >= since).to.be.true;",
 									"    }",
 									"});"
@@ -836,6 +1101,84 @@
 								"exec": [
 									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
 									"pm.test('Says how many', () => pm.expect(pm.response.json().data.deleted).to.be.a('number'));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Statistik: last 7 days",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/analytics?range=7d",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"analytics"
+							],
+							"query": [
+								{
+									"key": "range",
+									"value": "7d"
+								}
+							]
+						},
+						"description": "Our own counting next to Cloudflare Web Analytics (cloudflare is null when not connected)."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', () => pm.response.to.have.status(200));",
+									"const stats = pm.response.json().data;",
+									"pm.test('One entry per day', () => pm.expect(stats.series.length).to.eql(7));",
+									"pm.test('Has totals and breakdown', () => { pm.expect(stats.totals.own).to.have.property('views'); pm.expect(stats.breakdown).to.have.property('pages'); });"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Count a page view (what the website sends)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/analytics/hit",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"analytics",
+								"hit"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\"p\":\"/events\",\"r\":\"https://www.google.com/\"}"
+						},
+						"description": "Public, always 204. Note: Postman's user agent counts as a bot, so this one is not counted.",
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 204', () => pm.response.to.have.status(204));"
 								]
 							}
 						}
@@ -1086,6 +1429,80 @@
 									"key": "olderThan",
 									"value": "1y"
 								}
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Create menu without token → 401",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/menu-lists",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"menu-lists"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\"label\":\"Hackad\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 401', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Statistics without token → 401",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/analytics",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"analytics"
 							]
 						},
 						"auth": {

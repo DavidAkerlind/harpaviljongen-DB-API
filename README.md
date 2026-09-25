@@ -418,9 +418,22 @@ curl http://localhost:7000/api/auth/logout
 }
 ```
 
+### Menus
+
+Meny (`food`) and Vinlista (`wine`) always exist and can't be deleted. Staff can create more in the admin (e.g. *Lunchmeny*); each gets a `type` made from its name (`lunchmeny`). `navbar` / `home`: whether the website shows a button for it in the menu / on the homepage. Meny and Vinlista open the placeholder PDF when none is active; other menus only get a button when one of their PDFs is active.
+
+```http
+GET    /api/menu-lists                    All menus in order: [{ type, label, order, navbar, home, builtIn }]
+POST   /api/menu-lists                    (token) { "label": "Lunchmeny", "navbar"?: true, "home"?: true }  409 if the name is taken
+PATCH  /api/menu-lists/{type}             (token) { "label"?, "navbar"?, "home"? }
+DELETE /api/menu-lists/{type}             (token) The menu and all its PDFs (also in Cloudinary). Not Meny/Vinlista.
+```
+
+At most 20 menus. On startup the API makes sure Meny and Vinlista exist (and gives any PDFs of an unknown type a hidden menu).
+
 ### Menu PDF Operations
 
-`type` is `food` (Meny) or `wine` (Vinlista) on the website; `lunch` and `drinks` also exist.
+`type` is the `type` of a menu, see above.
 
 ```http
 GET    /api/menu-pdfs?type=food           List PDFs, newest first
@@ -437,7 +450,7 @@ DELETE /api/menu-pdfs/{id}                (token) Also deletes the file in Cloud
 ```http
 GET /api/site-settings                    Which pages show in the navbar / on the homepage
 PUT /api/site-settings                    (token) { "pages": { "chambre": { "navbar": true, "home": false } } }
-GET /api/site-config                      What the website reads: page switches + active Meny/Vinlista PDF
+GET /api/site-config                      What the website reads: page switches, menuLists (buttons with the active PDF's url) and menus (active PDF per type, for older versions of the website)
 GET /api/health                           API and database status
 ```
 
@@ -454,12 +467,24 @@ DELETE /api/activity?olderThan=30d|3m|6m|1y|all                  (admin) delete 
 
 - Newest first, max 100 per page. `before` = id of the last entry you have, for the next page.
 - `from` / `to`: ISO dates (`to` is exclusive). The admin sends midnight in the browser's time zone.
-- `category`: `menus`, `openingHours`, `pages`, `users`, `account`. `userId`: changes by one person.
+- `category`: `menus` (PDFs and the menus themselves), `openingHours`, `pages`, `users`, `account`, `log`. `userId`: changes by one person.
 - `total` counts everything matching the filters. Each entry has `user: { name, avatarUrl, deleted }` with the person's current name and picture.
 
-Written automatically after each change made through the admin: PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), users created/role/new password/deleted, and your own username, name, picture and password.
+Written automatically after each change made through the admin: menus created/changed/deleted, PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), users created/role/new password/deleted, and your own username, name, picture and password.
 
 **Kept for 1 year.** MongoDB deletes entries automatically when they are 365 days old (a TTL index on `createdAt`, checked about once a minute; the API sets it up on startup). Admins can delete older entries sooner with `DELETE /api/activity?olderThan=…`: everything older than 30 days (`30d`), 3 months (`3m`), 6 months (`6m`), 1 year (`1y`), or everything (`all`). The response says how many were deleted, and the clearing itself is logged (`activity.clear`, category `log`) so you can see who did it.
+
+### Statistics (Statistik in the admin)
+
+```http
+POST /api/analytics/hit                   (public) { "p": "/events", "r": "https://www.google.com/" } – sent by the website, always 204
+GET  /api/analytics?range=7d|30d|90d      (token, any role) our own numbers and Cloudflare's side by side
+PUT  /api/auth/dashboard                  (token) { "widgets": [{ "id": "visitors", "size": "medium" }] } your own Översikt layout, null = standard
+```
+
+The website counts every page view itself: only the path and the page the visitor came from are sent. No cookies, no IP addresses and nothing that identifies a visitor is stored, only counters per day (Stockholm time): page views and visits in total, per page, per referrer and per device type (`sitestats`, deleted after 400 days). A **visit** is a page view that didn't come from another page on the site, the same definition as Cloudflare Web Analytics. Bots are not counted, one IP address can count at most 100 page views per 10 minutes, and at most 60 different pages and 100 referrers are kept per day (the rest count as `(other)`), so made-up hits can't fill the database.
+
+`GET /api/analytics` returns `series` (per day: `own` and `cloudflare` `{ views, visits }`), `totals` (with `ownPrevious` for the period before), `breakdown` (`pages`, `referrers`, `devices`: `[{ key, own, cloudflare }]`) and `sources` (`own.since`, `cloudflare.status`: `ok`, `off` or `error`). Cloudflare is optional, see *Environment Variables*; `cloudflare` is `null` when it isn't connected. Cloudflare's days are UTC days.
 
 ### Opening Hours: whole week
 
@@ -518,6 +543,10 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=menu-pdfs
 CLOUDINARY_AVATAR_FOLDER=admin-avatars
+# Optional: Cloudflare Web Analytics next to our own numbers (see docs/GO_LIVE.md)
+CLOUDFLARE_API_TOKEN=
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_SITE_TAG=
 ```
 
 Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`, `CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).

@@ -338,8 +338,8 @@ components:
                     example: '6ab52937e69f242f1c0f69b6'
                 type:
                     type: string
-                    enum: ['food', 'wine', 'lunch', 'drinks']
-                    description: 'food = Meny, wine = Vinlista on the website'
+                    example: food
+                    description: 'The menu it belongs to (MenuList.type): food = Meny, wine = Vinlista, or a menu created in the admin'
                 title:
                     type: string
                     example: 'Höstmeny 2026'
@@ -363,6 +363,69 @@ components:
                 isActive:
                     type: boolean
                     description: 'At most one active PDF per type. The active one is linked from the website.'
+
+        MenuList:
+            type: object
+            description: A menu PDFs are uploaded to. Meny (food) and Vinlista (wine) are built in; staff can create more.
+            properties:
+                type:
+                    type: string
+                    description: Made from the name when created, used as the PDFs' type
+                    example: lunchmeny
+                label:
+                    type: string
+                    description: The name, also the text on the website's button
+                    example: Lunchmeny
+                order:
+                    type: number
+                    example: 2
+                navbar:
+                    type: boolean
+                    description: Show a button in the website's menu
+                home:
+                    type: boolean
+                    description: Show a button on the homepage
+                builtIn:
+                    type: boolean
+                    description: Meny and Vinlista. Can't be deleted; their buttons open a placeholder PDF when none is active.
+                createdAt:
+                    type: string
+                    format: date-time
+
+        Analytics:
+            type: object
+            description: Our own page-view counting next to Cloudflare Web Analytics (cloudflare values are null when it isn't connected)
+            properties:
+                range:
+                    type: object
+                    example: { key: 7d, from: '2026-09-19', to: '2026-09-25', days: 7 }
+                series:
+                    type: array
+                    description: One entry per day
+                    items:
+                        type: object
+                        example:
+                            date: '2026-09-25'
+                            own: { views: 64, visits: 39 }
+                            cloudflare: { views: 100, visits: 62 }
+                totals:
+                    type: object
+                    example:
+                        own: { views: 412, visits: 259 }
+                        ownPrevious: { views: 380, visits: 241 }
+                        cloudflare: { views: 498, visits: 308 }
+                breakdown:
+                    type: object
+                    description: Pages and devices by page views, referrers by visits; the biggest first
+                    example:
+                        pages: [{ key: '/', own: 255, cloudflare: 274 }]
+                        referrers: [{ key: '(direct)', own: 122, cloudflare: 149 }]
+                        devices: [{ key: mobile, own: 290, cloudflare: 339 }]
+                sources:
+                    type: object
+                    example:
+                        own: { since: '2026-09-06' }
+                        cloudflare: { status: ok }
 
         Activity:
             type: object
@@ -391,6 +454,9 @@ components:
                         - pdf.deactivate
                         - pdf.rename
                         - pdf.delete
+                        - menu.create
+                        - menu.update
+                        - menu.delete
                         - openingHours.update
                         - pages.update
                         - user.create
@@ -410,7 +476,8 @@ components:
                     type: object
                     description: |
                         Depends on the type:
-                        - pdf.*: `{ pdfType, title }`, plus `activated` (upload), `from` (rename), `wasActive` (delete)
+                        - pdf.*: `{ pdfType, menuLabel, title }`, plus `activated` (upload), `from` (rename), `wasActive` (delete)
+                        - menu.create: `{ menuType, label }`; menu.update: plus `changes: { label?: { from, to }, navbar?, home? }`; menu.delete: plus `pdfs` (how many were deleted)
                         - openingHours.update: `{ days: ['Fredag'] }` (only days that changed)
                         - pages.update: `{ changes: [{ page, placement, value }] }`
                         - user.*: `{ username }`, plus `role` (create, role)
@@ -1038,6 +1105,44 @@ paths:
                 '409':
                     description: Username already exists
 
+    /auth/dashboard:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Authentication
+            summary: Save your own Översikt layout
+            description: The widgets in order with their size. Unknown widget ids are ignored by the admin. `null` goes back to the standard layout. Not written to the change log.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [widgets]
+                            properties:
+                                widgets:
+                                    type: array
+                                    nullable: true
+                                    maxItems: 30
+                                    items:
+                                        type: object
+                                        required: [id, size]
+                                        properties:
+                                            id:
+                                                type: string
+                                                example: visitors
+                                            size:
+                                                type: string
+                                                enum: [small, medium, large]
+            responses:
+                '200':
+                    description: '{ user } with dashboard'
+                '400':
+                    description: Not a list of { id, size }, or the same widget twice
+                '401':
+                    description: Not logged in
+
     /auth/avatar:
         put:
             security:
@@ -1523,7 +1628,8 @@ paths:
                   required: false
                   schema:
                       type: string
-                      enum: ['food', 'wine', 'lunch', 'drinks']
+                      example: food
+                      description: 'A menu type, see GET /menu-lists'
             responses:
                 '200':
                     description: List of PDFs (empty list when none)
@@ -1561,7 +1667,8 @@ paths:
                                     format: binary
                                 type:
                                     type: string
-                                    enum: ['food', 'wine', 'lunch', 'drinks']
+                                    example: food
+                                    description: 'A menu type, see GET /menu-lists'
                                 title:
                                     type: string
                                     description: Name shown in the admin. Defaults to the file name.
@@ -1590,7 +1697,8 @@ paths:
                   required: true
                   schema:
                       type: string
-                      enum: ['food', 'wine', 'lunch', 'drinks']
+                      example: food
+                      description: 'A menu type, see GET /menu-lists'
             responses:
                 '200':
                     description: The active PDF
@@ -1836,12 +1944,153 @@ paths:
                 '400':
                     $ref: '#/components/responses/BadRequestError'
 
+    /menu-lists:
+        get:
+            tags:
+                - Menu PDFs
+            summary: All menus, in order
+            responses:
+                '200':
+                    description: Menus
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/MenuList'
+        post:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Create a menu
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [label]
+                            properties:
+                                label:
+                                    type: string
+                                    maxLength: 40
+                                    example: Lunchmeny
+                                navbar:
+                                    type: boolean
+                                    default: true
+                                home:
+                                    type: boolean
+                                    default: true
+            responses:
+                '201':
+                    description: Created
+                '400':
+                    description: Name missing or too long, or already 20 menus
+                '409':
+                    description: A menu with that name already exists
+    /menu-lists/{type}:
+        parameters:
+            - in: path
+              name: type
+              required: true
+              schema:
+                  type: string
+                  example: lunchmeny
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Rename a menu or show/hide its buttons on the website
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                label:
+                                    type: string
+                                navbar:
+                                    type: boolean
+                                home:
+                                    type: boolean
+            responses:
+                '200':
+                    description: Updated
+                '404':
+                    description: No such menu
+                '409':
+                    description: A menu with that name already exists
+        delete:
+            security:
+                - bearerAuth: []
+            tags:
+                - Menu PDFs
+            summary: Delete a menu and all its PDFs
+            description: Meny and Vinlista can't be deleted. The PDFs are also deleted from Cloudinary.
+            responses:
+                '200':
+                    description: Deleted
+                '400':
+                    description: Meny or Vinlista
+                '502':
+                    description: Cloudinary could not delete a file; the rest is kept, try again
+
+    /analytics:
+        get:
+            security:
+                - bearerAuth: []
+            tags:
+                - Statistics
+            summary: Visits and page views, ours and Cloudflare's
+            parameters:
+                - in: query
+                  name: range
+                  schema:
+                      type: string
+                      enum: [7d, 30d, 90d]
+                      default: 7d
+            responses:
+                '200':
+                    description: Statistics
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        $ref: '#/components/schemas/Analytics'
+                '400':
+                    description: Unknown range
+    /analytics/hit:
+        post:
+            tags:
+                - Statistics
+            summary: Count one page view (sent by the website)
+            description: |
+                Public. Sent with navigator.sendBeacon as text/plain (JSON also works). No cookies and no IP addresses are stored.
+                A visit = a page view whose referrer isn't the site itself. Bots and invalid paths are ignored; at most 100 per IP address per 10 minutes.
+            requestBody:
+                content:
+                    text/plain:
+                        example: '{"p":"/events","r":"https://www.google.com/"}'
+            responses:
+                '204':
+                    description: Always (counted or ignored)
+                '429':
+                    description: Too many page views from this IP address
+
     /site-config:
         get:
             tags:
                 - Site
             summary: Everything the public website needs in one call
-            description: Page switches plus the active Meny (food) and Vinlista (wine) PDF. A menu is null when no PDF is active.
+            description: Page switches, the menus' buttons (menuLists, in order, with the active PDF's url or null) and the active PDF per menu type (menus, read by older versions of the website).
             responses:
                 '200':
                     description: Site config
@@ -1862,6 +2111,10 @@ paths:
                                             title: 'Höstmeny 2026'
                                             uploadedAt: '2026-09-24T13:44:23.876Z'
                                         wine: null
+                                    menuLists:
+                                        - { type: food, label: Meny, navbar: true, home: true, builtIn: true, url: 'https://res.cloudinary.com/<cloud>/image/upload/v1/menu-pdfs/food-1790257463874.pdf' }
+                                        - { type: wine, label: Vinlista, navbar: true, home: true, builtIn: true, url: null }
+                                        - { type: lunchmeny, label: Lunchmeny, navbar: true, home: false, builtIn: false, url: null }
 
     /health:
         get:
@@ -1888,6 +2141,8 @@ tags:
     - name: WineList
       description: Wine list management operations
     - name: Menu PDFs
-      description: Meny and Vinlista PDFs shown on the website
+      description: The menus (Meny, Vinlista and ones created in the admin) and their PDFs
     - name: Site
       description: Page switches, site config, latest changes and health
+    - name: Statistics
+      description: Page views counted by the website, next to Cloudflare Web Analytics

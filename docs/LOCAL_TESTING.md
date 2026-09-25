@@ -8,7 +8,7 @@ This guide runs the **API**, the **admin** and the **public website** on your ow
 | Admin           | `harpaviljongen-admin-service`| http://localhost:5174            |
 | Public website  | `harpaviljongen`              | http://localhost:5173            |
 
-Branches: the **API** and the **admin** use `claude/profile-and-change-log` (your profile, profile pictures, all changes with filters). The **website** has no changes for it, so use `main` there.
+Branches: all three repos use `claude/serene-fermat-05id5w` (dashboard widgets, statistics, new menus, Logg in the sidebar). Once merged, use `main` everywhere.
 
 The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit `.env` files in VS Code or another editor rather than creating them with `echo`, because PowerShell can save them in an encoding Node and Vite can't read.
 
@@ -35,7 +35,7 @@ The commands work in **PowerShell** (Windows) and in macOS/Linux terminals. Edit
 ```bash
 cd harpaviljongen-DB-API
 git fetch origin
-git checkout claude/profile-and-change-log
+git checkout claude/serene-fermat-05id5w
 npm install
 cp .env.example .env
 ```
@@ -111,7 +111,7 @@ You can also run everything at once: click the collection → **Run** (pick a PD
 ```bash
 cd harpaviljongen-admin-service
 git fetch origin
-git checkout claude/profile-and-change-log
+git checkout claude/serene-fermat-05id5w
 npm install
 cp .env.example .env.local     # points the admin to http://localhost:7000/api
 npm run dev
@@ -125,14 +125,17 @@ Open http://localhost:5174 and log in with the user from step 1.
 
 ```bash
 cd harpaviljongen
-git checkout main
+git checkout claude/serene-fermat-05id5w
 git pull
 npm install
 cp .env.example .env.local     # points the website to http://localhost:7000/api
+echo "VITE_ANALYTICS=on" >> .env.local   # optional: count your page views in Statistik
 npm run dev
 ```
 
 Open http://localhost:5173. (Without `.env.local` the website uses the live API.)
+
+Page views are only counted on harpaviljongen.com, unless `VITE_ANALYTICS=on` is set. Browsers controlled by test tools (user agent *HeadlessChrome*) count as bots and are ignored.
 
 ---
 
@@ -165,12 +168,20 @@ Keep the admin and the website open side by side. After a change in the admin, *
 | **Översikt → Senaste ändringar** | Everything above is listed with who did it (*Du* for you). |
 | Your name at the bottom of the sidebar → **Min profil** (phone: your initial top right) | Add a picture (click the round picture or *Lägg till bild*). It appears in the sidebar, in *Användare* and next to your changes. |
 | **Min profil**: fill in *Namn*, change *Användarnamn*, **Spara** | The sidebar and *Hej, …!* use your first name. Log out and in with the new username (upper/lower case doesn't matter). |
-| **Översikt → Senaste ändringar → Visa alla** | *Alla ändringar*, grouped by day, 30 at a time (*Visa fler*). |
-| On *Alla ändringar*: *Datum* (Idag, Igår, 7/30 dagar, *Välj dag…*, *Välj period…*), *Kategori*, *Användare* | The list and the count follow the filters. Reload: the filters stay (they're in the address). *Rensa filter* resets. |
-| **Rensa logg** on *Alla ändringar* (admins only) | Shows how many changes are older than 30 days, 3 months, 6 months, 1 year, and in total. Pick one, confirm: they're gone and *Du tog bort … ur loggen* is at the top. *Allt* empties the log. Staff don't see the button. |
+| **Översikt → Senaste ändringar → Visa hela loggen** | *Logg*, grouped by day, 30 at a time (*Visa fler*). |
+| On *Logg*: *Datum* (Idag, Igår, 7/30 dagar, *Välj dag…*, *Välj period…*), *Kategori*, *Användare* | The list and the count follow the filters. Reload: the filters stay (they're in the address). *Rensa filter* resets. |
+| **Rensa logg** on *Logg* (admins only) | Shows how many changes are older than 30 days, 3 months, 6 months, 1 year, and in total. Pick one, confirm: they're gone and *Du tog bort … ur loggen* is at the top. *Allt* empties the log. Staff don't see the button. |
+| **Översikt → Anpassa**: remove a widget (×), **Lägg till** one, change size (the square icon: Liten/Mellan/Stor), drag one by its title bar or ⠿ (keyboard: Tab to ⠿, Space, arrows, Space) → **Klar** | The layout stays after a reload and when you log in on another browser. Another user has their own layout. **Återställ** brings back the standard one. On a 14" laptop four widgets fit on the screen. |
+| **Menyer → Ny meny** (top right), e.g. *Lunchmeny* | A *Lunchmeny* tab. No button on the website yet. |
+| Upload a PDF to *Lunchmeny* and show it on the website | *Lunchmeny* appears in the navbar and as a *LUNCHMENY* button on the homepage. |
+| *Lunchmeny* → **Inställningar**: switch off *På startsidan*, rename it | The homepage button disappears, the navbar link gets the new name. |
+| **Inställningar → Ta bort menyn** | The tab, its PDFs (also in Cloudinary) and its buttons on the website are gone. Meny and Vinlista can't be deleted. |
+| **Statistik** with `VITE_ANALYTICS=on` on the website: click around the website | *Egen mätning* counts your page views; the first page of a visit counts as a visit. The Cloudflare line only shows when `CLOUDFLARE_*` is set in the API's `.env`. |
+| **Logg** in the sidebar (phone: **Mer → Logg**) | The whole change log with filters, including the menu changes above. Old links to `/andringar` still work. |
+| **Användare → Lägg till användare** (the last row in the list) | Same dialog as **Ny användare** at the top. |
 | Stop the API (Ctrl+C) and reload the website | Navbar and buttons still work with the last settings it saw (the opening hours in the footer show an error until the API is back — same as today). |
 
-Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar, and *Användare* and *Logga ut* are behind your initial top right.
+Also try the admin on your phone-sized browser window (DevTools → device toolbar): there is a bottom tab bar instead of the sidebar, with *Statistik*, *Logg* and *Användare* under **Mer**, and *Min profil* and *Logga ut* behind your initial top right.
 
 ---
 

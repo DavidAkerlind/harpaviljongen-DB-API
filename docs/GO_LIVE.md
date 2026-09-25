@@ -110,6 +110,30 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 
 ---
 
+## Update: dashboard widgets, statistics and new menus (branch `claude/serene-fermat-05id5w`)
+
+- **Översikt** is made of widgets. **Anpassa** lets everyone add, remove, resize and drag them; the layout is saved on their account.
+- **Statistik** (sidebar; on a phone under **Mer**) shows visits and page views: our own counting plus Cloudflare Web Analytics when connected.
+- **Menyer → Ny meny** creates more menus (e.g. Lunchmeny) with their own buttons on the website. **Inställningar** on each menu renames it or hides its buttons.
+- **Logg** is its own item in the sidebar (old links to `/andringar` still work). **Användare** has a "Lägg till användare" row at the bottom of the list.
+
+Deploy in this order (each step keeps the live site working):
+
+1. **API:** merge the branch into `main` in **harpaviljongen-DB-API**. On startup it creates the menus Meny and Vinlista (nothing to do). The website and the current admin keep working as before.
+2. **Admin:** merge the branch into `main` in **harpaviljongen-admin-service**.
+3. **Website:** merge the branch into `main` in **harpaviljongen**. From then on page views are counted, and new menus get buttons.
+4. **Optional, Cloudflare Web Analytics** (the second line in the charts):
+    (Cloudflare renames menus now and then; the words below may differ slightly.)
+
+    1. Cloudflare → **Workers & Pages** → the website's project (**harpaviljongen**) → **Metrics** → **Web Analytics** → **Enable**. Cloudflare adds its script on the next deploy, so re-deploy the latest deployment (or merge step 3 after this). Data is collected from then on.
+    2. Cloudflare → **Analytics & Logs** → **Web Analytics** → the site harpaviljongen.com → **Manage site** / the JS snippet: copy the **site tag** (the `token` value, 32 characters).
+    3. Your **account ID**: on the Cloudflare account home page, or in the URL `dash.cloudflare.com/<account id>/…`.
+    4. Cloudflare → **My Profile** → **API Tokens** → **Create Token** → **Custom token**: permission **Account → Account Analytics → Read**, for your account. Copy the token.
+    5. Render → the API service → **Environment**: add `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_SITE_TAG` and save (Render restarts the API).
+    6. Open **Statistik** in the admin: the note at the bottom says whether Cloudflare is connected, or what Cloudflare answered if something is wrong.
+
+Our own counting uses no cookies and stores no IP addresses, so it needs no cookie banner. Cloudflare Web Analytics is cookie-free too.
+
 ## Update: profile and all changes (branch `claude/profile-and-change-log`)
 
 Everyone can set a name, username and profile picture under **Min profil**, and **Översikt → Senaste ändringar → Visa alla** opens every change with filters. Admins can clear old changes there (**Rensa logg**), and changes are deleted automatically after 1 year.
