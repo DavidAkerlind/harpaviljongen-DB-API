@@ -121,16 +121,18 @@ Deploy in this order (each step keeps the live site working):
 
 1. **API:** merge the branch into `main` in **harpaviljongen-DB-API**. On startup it creates the menus Meny and Vinlista (nothing to do). The website and the current admin keep working as before.
 2. **Admin:** merge the branch into `main` in **harpaviljongen-admin-service**.
-3. **Website:** merge the branch into `main` in **harpaviljongen**. From then on page views are counted, and new menus get buttons.
-4. **Optional, Cloudflare Web Analytics** (the second line in the charts):
+3. **Website:** merge the branch into `main` in **harpaviljongen**. From then on page views are counted, and new menus get buttons. Check it: open harpaviljongen.com, then **Statistik** in the admin a minute later. (A browser with an ad blocker may not be counted, so try a normal one if you see nothing.)
+4. **Optional, Cloudflare Web Analytics** (the second, blue line in the charts):
+
     (Cloudflare renames menus now and then; the words below may differ slightly.)
 
-    1. Cloudflare → **Workers & Pages** → the website's project (**harpaviljongen**) → **Metrics** → **Web Analytics** → **Enable**. Cloudflare adds its script on the next deploy, so re-deploy the latest deployment (or merge step 3 after this). Data is collected from then on.
-    2. Cloudflare → **Analytics & Logs** → **Web Analytics** → the site harpaviljongen.com → **Manage site** / the JS snippet: copy the **site tag** (the `token` value, 32 characters).
-    3. Your **account ID**: on the Cloudflare account home page, or in the URL `dash.cloudflare.com/<account id>/…`.
-    4. Cloudflare → **My Profile** → **API Tokens** → **Create Token** → **Custom token**: permission **Account → Account Analytics → Read**, for your account. Copy the token.
-    5. Render → the API service → **Environment**: add `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_SITE_TAG` and save (Render restarts the API).
-    6. Open **Statistik** in the admin: the note at the bottom says whether Cloudflare is connected, or what Cloudflare answered if something is wrong.
+    1. Cloudflare → **Analytics & Logs** → **Web Analytics** → **harpaviljongen.com** → **Manage site** → *Real User Measurements (RUM)*: choose **Enable** (*The JS Snippet will be automatically injected*). **Not** *Enable, excluding visitor data in the EU*: Sweden is in the EU, so that would leave out almost every visitor. Cloudflare collects data from then on; the first numbers show after a few minutes.
+    2. Your **account ID**: the Cloudflare account home page → the **⋯** next to the account name → **Copy account ID** (it is also in the address: `dash.cloudflare.com/<account id>/…`).
+    3. An **API token**: **My Profile** (top right) → **API Tokens** → **Create Token** → **Create Custom Token** → *Permissions*: **Account** · **Account Analytics** · **Read**; *Account Resources*: **Include** · your account → **Continue to summary** → **Create Token**. Copy it (it is only shown once).
+    4. Render → the API service → **Environment**: add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` and save (Render restarts the API).
+    5. Open **Statistik** in the admin. The blue *Cloudflare* line shows up; if Cloudflare says something is wrong, its message is shown at the bottom of the page.
+
+    No site tag is needed: the API finds the website's numbers by its address (`harpaviljongen.com` and `www.harpaviljongen.com`). Only if you want to point it at one specific Web Analytics site: open that site's dashboard under **Web Analytics**; the address bar then contains `siteTag~in=` followed by 32 characters. Put those in `CLOUDFLARE_SITE_TAG` on Render.
 
 Our own counting uses no cookies and stores no IP addresses, so it needs no cookie banner. Cloudflare Web Analytics is cookie-free too.
 

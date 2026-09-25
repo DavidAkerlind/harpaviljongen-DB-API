@@ -1,10 +1,12 @@
 import { addDays } from '../utils/days.js';
 
 // Reads Cloudflare Web Analytics for the website through Cloudflare's GraphQL API.
-// Optional: without these three variables the admin only shows our own statistics.
-//   CLOUDFLARE_API_TOKEN   – token with "Account Analytics: Read"
-//   CLOUDFLARE_ACCOUNT_ID  – the Cloudflare account id
-//   CLOUDFLARE_SITE_TAG    – the Web Analytics site tag of harpaviljongen.com
+// Optional: without the first two variables the admin only shows our own statistics.
+//   CLOUDFLARE_API_TOKEN    – token with "Account Analytics: Read"
+//   CLOUDFLARE_ACCOUNT_ID   – the Cloudflare account id
+//   CLOUDFLARE_SITE_HOSTS   – optional, the website's hostnames, comma separated
+//                             (default harpaviljongen.com,www.harpaviljongen.com)
+//   CLOUDFLARE_SITE_TAG     – optional, a Web Analytics site tag to use instead of the hostnames
 // See docs/GO_LIVE.md for where to find them.
 
 const GRAPHQL_URL = 'https://api.cloudflare.com/client/v4/graphql';
@@ -16,16 +18,30 @@ const DEFAULT_LIMITS = { maxDuration: 7 * DAY_SECONDS, notOlderThan: 90 * DAY_SE
 // The website's own addresses: navigating between its pages is not a referrer
 const SITE_HOST = /(^|\.)harpaviljongen\.(com|pages\.dev)$/;
 
+const DEFAULT_HOSTS = 'harpaviljongen.com,www.harpaviljongen.com';
+
 const config = () => ({
-	token: process.env.CLOUDFLARE_API_TOKEN,
-	accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-	siteTag: process.env.CLOUDFLARE_SITE_TAG,
+	token: process.env.CLOUDFLARE_API_TOKEN?.trim(),
+	accountId: process.env.CLOUDFLARE_ACCOUNT_ID?.trim(),
+	siteTag: process.env.CLOUDFLARE_SITE_TAG?.trim(),
+	hosts: (process.env.CLOUDFLARE_SITE_HOSTS || DEFAULT_HOSTS)
+		.split(',')
+		.map((host) => host.trim().toLowerCase())
+		.filter(Boolean),
 });
 
 export const isCloudflareConfigured = () => {
-	const { token, accountId, siteTag } = config();
-	return Boolean(token && accountId && siteTag);
+	const { token, accountId } = config();
+	return Boolean(token && accountId);
 };
+
+// Which page loads are the website's: by site tag when one is set, otherwise by hostname
+// (no site tag needed, which Cloudflare doesn't show for sites set up automatically)
+function siteFilter() {
+	const { siteTag, hosts } = config();
+	if (siteTag) return `{ siteTag: ${JSON.stringify(siteTag)} }`;
+	return `{ OR: [${hosts.map((host) => `{ requestHost: ${JSON.stringify(host)} }`).join(', ')}] }`;
+}
 
 async function graphql(query) {
 	const res = await fetch(GRAPHQL_URL, {
@@ -69,10 +85,10 @@ async function getLimits() {
 
 // One query per period no longer than maxDuration
 async function queryPeriod(start, end) {
-	const { accountId, siteTag } = config();
+	const { accountId } = config();
 	const filter = `{ AND: [
 		{ datetime_geq: ${JSON.stringify(start.toISOString())}, datetime_lt: ${JSON.stringify(end.toISOString())} },
-		{ siteTag: ${JSON.stringify(siteTag)} }
+		${siteFilter()}
 	] }`;
 	return graphql(`{
 		viewer { accounts(filter: { accountTag: ${JSON.stringify(accountId)} }) {

@@ -477,7 +477,8 @@ Written automatically after each change made through the admin: menus created/ch
 ### Statistics (Statistik in the admin)
 
 ```http
-POST /api/analytics/hit                   (public) { "p": "/events", "r": "https://www.google.com/" } – sent by the website, always 204
+POST /api/site-config/seen                (public) { "p": "/events", "r": "https://www.google.com/" } – sent by the website, always 204
+POST /api/analytics/hit                   (public) the same; the website doesn't use it since ad blockers block /analytics/
 GET  /api/analytics?range=7d|30d|90d      (token, any role) our own numbers and Cloudflare's side by side
 PUT  /api/auth/dashboard                  (token) { "widgets": [{ "id": "visitors", "size": "medium" }] } your own Översikt layout, null = standard
 ```
@@ -546,7 +547,8 @@ CLOUDINARY_AVATAR_FOLDER=admin-avatars
 # Optional: Cloudflare Web Analytics next to our own numbers (see docs/GO_LIVE.md)
 CLOUDFLARE_API_TOKEN=
 CLOUDFLARE_ACCOUNT_ID=
-CLOUDFLARE_SITE_TAG=
+# CLOUDFLARE_SITE_HOSTS=harpaviljongen.com,www.harpaviljongen.com   (default)
+# CLOUDFLARE_SITE_TAG=                                              (instead of the hostnames)
 ```
 
 Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`, `CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).

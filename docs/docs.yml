@@ -394,7 +394,7 @@ components:
 
         Analytics:
             type: object
-            description: Our own page-view counting next to Cloudflare Web Analytics (cloudflare values are null when it isn't connected)
+            description: Our own page-view counting next to Cloudflare Web Analytics (cloudflare values are null when CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID aren't set)
             properties:
                 range:
                     type: object
@@ -2067,11 +2067,26 @@ paths:
                                         $ref: '#/components/schemas/Analytics'
                 '400':
                     description: Unknown range
+    /site-config/seen:
+        post:
+            tags:
+                - Statistics
+            summary: Count one page view (what the website sends)
+            description: The same as POST /analytics/hit, at an address ad blockers don't block. Always 204.
+            requestBody:
+                content:
+                    text/plain:
+                        example: '{"p":"/events","r":"https://www.google.com/"}'
+            responses:
+                '204':
+                    description: Always (counted or ignored)
+                '429':
+                    description: Too many page views from this IP address
     /analytics/hit:
         post:
             tags:
                 - Statistics
-            summary: Count one page view (sent by the website)
+            summary: Count one page view (older address, the website uses /site-config/seen)
             description: |
                 Public. Sent with navigator.sendBeacon as text/plain (JSON also works). No cookies and no IP addresses are stored.
                 A visit = a page view whose referrer isn't the site itself. Bots and invalid paths are ignored; at most 100 per IP address per 10 minutes.

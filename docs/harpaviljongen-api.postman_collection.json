@@ -1154,20 +1154,20 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/analytics/hit",
+							"raw": "{{baseUrl}}/site-config/seen",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"analytics",
-								"hit"
+								"site-config",
+								"seen"
 							]
 						},
 						"body": {
 							"mode": "raw",
 							"raw": "{\"p\":\"/events\",\"r\":\"https://www.google.com/\"}"
 						},
-						"description": "Public, always 204. Note: Postman's user agent counts as a bot, so this one is not counted.",
+						"description": "Public, always 204. The website sends this on every page view (POST /analytics/hit does the same). Postman's user agent counts as a bot, so this one is not counted.",
 						"auth": {
 							"type": "noauth"
 						}
