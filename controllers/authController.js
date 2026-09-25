@@ -19,6 +19,31 @@ import {
 import { passwordProblem, usernameProblem } from '../utils/userValidation.js';
 
 const MAX_NAME = 50;
+const MAX_WIDGETS = 30;
+const WIDGET_SIZES = ['small', 'medium', 'large'];
+const WIDGET_ID = /^[a-z][a-zA-Z0-9:_-]{0,49}$/;
+
+// null (standard layout) or [{ id, size }] with unique ids
+function dashboardProblem(widgets) {
+	if (widgets === null) return null;
+	if (!Array.isArray(widgets) || widgets.length > MAX_WIDGETS) {
+		return `widgets must be null or a list of at most ${MAX_WIDGETS} widgets`;
+	}
+	const ids = new Set();
+	for (const widget of widgets) {
+		if (
+			!widget ||
+			typeof widget.id !== 'string' ||
+			!WIDGET_ID.test(widget.id) ||
+			!WIDGET_SIZES.includes(widget.size)
+		) {
+			return `Every widget needs an id and a size (${WIDGET_SIZES.join(', ')})`;
+		}
+		if (ids.has(widget.id)) return 'The same widget can only be added once';
+		ids.add(widget.id);
+	}
+	return null;
+}
 
 const fail = (res, status, message) =>
 	res.status(status).json(constructResObj(status, message, false));
@@ -29,8 +54,14 @@ const tokenPayload = (user) => ({
 	v: user.tokenVersion ?? 0,
 });
 
-// { userId, username, name, avatarUrl, role, createdAt }
-const publicUser = (user) => user.toJSON();
+// { userId, username, name, avatarUrl, role, createdAt, dashboard }. The dashboard
+// layout is only sent to its owner, not in the user list.
+const publicUser = (user) => ({
+	...user.toJSON(),
+	dashboard: Array.isArray(user.dashboard)
+		? user.dashboard.map(({ id, size }) => ({ id, size }))
+		: null,
+});
 
 export class AuthController {
 	static async login(req, res, next) {
@@ -207,6 +238,22 @@ export class AuthController {
 			constructResObj(200, 'Profile picture removed', true, {
 				user: publicUser(user),
 			})
+		);
+	}
+
+	// PUT /api/auth/dashboard { widgets: [{ id, size }] | null } – not in the change log,
+	// it only affects your own Översikt
+	static async saveDashboard(req, res) {
+		const widgets = req.body?.widgets;
+		const problem =
+			widgets === undefined ? 'widgets is required' : dashboardProblem(widgets);
+		if (problem) return fail(res, 400, problem);
+
+		const user = req.userDoc;
+		user.dashboard = widgets === null ? undefined : widgets.map(({ id, size }) => ({ id, size }));
+		await user.save();
+		res.json(
+			constructResObj(200, 'Dashboard saved', true, { user: publicUser(user) })
 		);
 	}
 }

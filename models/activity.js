@@ -35,7 +35,8 @@ const activitySchema = new mongoose.Schema(
 
 // Filter categories in the admin -> type prefixes
 export const ACTIVITY_CATEGORIES = {
-	menus: 'pdf',
+	// PDFs and the menus themselves
+	menus: '(pdf|menu)',
 	openingHours: 'openingHours',
 	pages: 'pages',
 	users: 'user',

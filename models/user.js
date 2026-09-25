@@ -48,6 +48,12 @@ const userSchema = new Schema(
 			type: Number,
 			default: 0,
 		},
+		// The widgets on this person's Översikt, in order: [{ id: 'visitors', size: 'medium' }].
+		// Not set = the standard layout.
+		dashboard: {
+			type: [{ _id: false, id: String, size: String }],
+			default: undefined,
+		},
 	},
 	{
 		timestamps: true,
