@@ -394,11 +394,24 @@ components:
 
         Analytics:
             type: object
-            description: Our own page-view counting next to Cloudflare's traffic data for the website, without bots and data centres (cloudflare values are null when CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID aren't set)
+            description: Our own page-view counting and Cloudflare's traffic data for the website, without bots and data centres. The admin shows `combined` (the two added together). The rest has them separately, for older versions of the admin (cloudflare values are null when CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID aren't set).
             properties:
                 range:
                     type: object
                     example: { key: 7d, from: '2026-09-19', to: '2026-09-25', days: 7 }
+                combined:
+                    type: object
+                    description: Our own numbers and Cloudflare's added together. series is null on days neither counted. previous (the period before) is null unless both sources counted all of it. breakdown values are the sums (referrers only our own, countries only Cloudflare's).
+                    example:
+                        series: [{ date: '2026-09-25', views: 105, visits: 72 }]
+                        totals: { views: 692, visits: 480 }
+                        previous: { views: 640, visits: 455 }
+                        breakdown:
+                            pages: [{ key: '/', value: 445 }]
+                            referrers: [{ key: '(direct)', value: 122 }]
+                            devices: [{ key: mobile, value: 486 }]
+                            countries: [{ key: SE, value: 231 }]
+                        since: '2026-08-26'
                 series:
                     type: array
                     description: One entry per day (Stockholm time). cloudflare is null on days Cloudflare no longer has.
@@ -516,6 +529,61 @@ components:
                             $ref: '#/components/schemas/PageVisibility'
                         gallery:
                             $ref: '#/components/schemas/PageVisibility'
+                hero:
+                    $ref: '#/components/schemas/HeroSettings'
+
+        HeroSettings:
+            type: object
+            properties:
+                slideshow:
+                    type: boolean
+                    default: true
+                    description: false = only the first shown photo is shown
+                intervalSeconds:
+                    type: integer
+                    minimum: 5
+                    maximum: 30
+                    default: 10
+                    description: How long each photo is shown
+                shuffle:
+                    type: boolean
+                    default: false
+                    description: The first shown photo first, the rest shuffled
+
+        HeroImage:
+            type: object
+            properties:
+                id:
+                    type: string
+                url:
+                    type: string
+                    example: 'https://res.cloudinary.com/<cloud>/image/upload/v1790578705/hero-images/hero-1790578705111.jpg'
+                originalName:
+                    type: string
+                    example: 'IMG_4321.jpg'
+                width:
+                    type: integer
+                    example: 3840
+                height:
+                    type: integer
+                    example: 2560
+                bytes:
+                    type: integer
+                quality:
+                    type: object
+                    description: 1–10 from the photo's size, worked out at upload. desktop scores the width a 16:9 screen shows (10 at 2560 px), phone the height an upright phone shows (10 at 1600 px), score is the weaker. rating good 8–10, ok 5–7, poor 1–4.
+                    example: { score: 8, desktop: 8, phone: 10, rating: good }
+                shown:
+                    type: boolean
+                order:
+                    type: integer
+                focus:
+                    type: object
+                    description: The most important point in % from the top left (CSS object-position)
+                    example: { x: 50, y: 35 }
+                uploadedAt:
+                    type: string
+                    format: date-time
 
     responses:
         BadRequestError:
@@ -2042,13 +2110,178 @@ paths:
                 '502':
                     description: Cloudinary could not delete a file; the rest is kept, try again
 
+    /hero:
+        get:
+            tags:
+                - Startbild
+            summary: The home page's photos (all, in order) and slideshow settings
+            responses:
+                '200':
+                    description: '{ settings, images }'
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            settings:
+                                                $ref: '#/components/schemas/HeroSettings'
+                                            images:
+                                                type: array
+                                                items:
+                                                    $ref: '#/components/schemas/HeroImage'
+
+    /hero/images:
+        post:
+            security:
+                - bearerAuth: []
+            tags:
+                - Startbild
+            summary: Upload a photo (JPG, PNG or WebP, max 10 MB); added last and shown
+            description: Stored in Cloudinary at most 3840 px on the longest side, and given a quality score. At most 30 photos.
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required: [file]
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+            responses:
+                '201':
+                    description: The new photo
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        $ref: '#/components/schemas/HeroImage'
+                '400':
+                    description: No file, or not a JPG/PNG/WebP image
+                '401':
+                    description: Missing or invalid token
+                '409':
+                    description: Already 30 photos
+                '413':
+                    description: File larger than 10 MB
+
+    /hero/images/{id}:
+        patch:
+            security:
+                - bearerAuth: []
+            tags:
+                - Startbild
+            summary: Show/hide a photo or move its focus point
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                shown:
+                                    type: boolean
+                                focus:
+                                    type: object
+                                    properties:
+                                        x: { type: number, minimum: 0, maximum: 100 }
+                                        y: { type: number, minimum: 0, maximum: 100 }
+                        example:
+                            focus: { x: 40, y: 65 }
+            responses:
+                '200':
+                    description: The photo after the change
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+        delete:
+            security:
+                - bearerAuth: []
+            tags:
+                - Startbild
+            summary: Delete a photo (also its file in Cloudinary)
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Deleted
+                '404':
+                    $ref: '#/components/responses/NotFoundError'
+                '502':
+                    description: Cloudinary couldn't delete the file; nothing was deleted, try again
+
+    /hero/order:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Startbild
+            summary: Save a new order; the first shown photo is shown first
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [ids]
+                            properties:
+                                ids:
+                                    type: array
+                                    description: Every photo's id, exactly once
+                                    items:
+                                        type: string
+            responses:
+                '200':
+                    description: The photos in the new order
+                '409':
+                    description: ids doesn't match the photos (they changed meanwhile)
+
+    /hero/settings:
+        put:
+            security:
+                - bearerAuth: []
+            tags:
+                - Startbild
+            summary: Slideshow on/off, time per photo, shuffled order (only what's sent changes)
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/HeroSettings'
+                        example:
+                            intervalSeconds: 15
+                            shuffle: true
+            responses:
+                '200':
+                    description: The settings after the change
+                '400':
+                    $ref: '#/components/responses/BadRequestError'
+
     /analytics:
         get:
             security:
                 - bearerAuth: []
             tags:
                 - Statistics
-            summary: Visits and page views, ours and Cloudflare's
+            summary: Visits and page views, ours and Cloudflare's added together
             parameters:
                 - in: query
                   name: range
@@ -2106,7 +2339,7 @@ paths:
             tags:
                 - Site
             summary: Everything the public website needs in one call
-            description: Page switches, the menus' buttons (menuLists, in order, with the active PDF's url or null) and the active PDF per menu type (menus, read by older versions of the website).
+            description: Page switches, the menus' buttons (menuLists, in order, with the active PDF's url or null), the active PDF per menu type (menus, read by older versions of the website) and the home page's photos (hero; slides has only the shown photos, first first, and is empty when none is shown).
             responses:
                 '200':
                     description: Site config
@@ -2131,6 +2364,15 @@ paths:
                                         - { type: food, label: Meny, navbar: true, home: true, builtIn: true, url: 'https://res.cloudinary.com/<cloud>/image/upload/v1/menu-pdfs/food-1790257463874.pdf' }
                                         - { type: wine, label: Vinlista, navbar: true, home: true, builtIn: true, url: null }
                                         - { type: lunchmeny, label: Lunchmeny, navbar: true, home: false, builtIn: false, url: null }
+                                    hero:
+                                        slideshow: true
+                                        intervalSeconds: 10
+                                        shuffle: false
+                                        slides:
+                                            - key: '6aba1011742703be09626632'
+                                              src: 'https://res.cloudinary.com/<cloud>/image/upload/f_auto,q_auto,c_limit,w_2560/v1790578705/hero-images/hero-1790578705111.jpg'
+                                              srcSet: '…/w_720/… 720w, …/w_1280/… 1280w, …/w_1920/… 1920w, …/w_2560/… 2560w'
+                                              position: '50% 35%'
 
     /health:
         get:
@@ -2160,5 +2402,7 @@ tags:
       description: The menus (Meny, Vinlista and ones created in the admin) and their PDFs
     - name: Site
       description: Page switches, site config, latest changes and health
+    - name: Startbild
+      description: The photos at the top of the home page and how they are shown
     - name: Statistics
-      description: Page views counted by the website, next to Cloudflare's traffic data
+      description: Page views counted by the website, added to Cloudflare's traffic data

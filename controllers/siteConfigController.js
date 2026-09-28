@@ -1,16 +1,18 @@
 import SiteSettingsService from '../services/siteSettingsService.js';
 import MenuPdf from '../models/MenuPdf.js';
 import { listMenuLists } from '../services/menuListService.js';
+import { heroForSite } from '../services/heroService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 
 export class SiteConfigController {
 	// Allt hemsidan behöver för navbar och startsidans knappar, i ett anrop
 	static async getSiteConfig(req, res) {
 		try {
-			const [settings, menuLists, activePdfs] = await Promise.all([
-				SiteSettingsService.getSettings(),
+			const settings = await SiteSettingsService.getSettings();
+			const [menuLists, activePdfs, hero] = await Promise.all([
 				listMenuLists(),
 				MenuPdf.find({ isActive: true }),
+				heroForSite(settings),
 			]);
 
 			const activeFor = (type) => {
@@ -39,6 +41,10 @@ export class SiteConfigController {
 						builtIn: menu.builtIn,
 						url: activeFor(menu.type)?.url ?? null,
 					})),
+					// The home page's photos: { slideshow, intervalSeconds, shuffle, slides }.
+					// slides is empty when none is uploaded and shown; the website then
+					// shows its built-in photos.
+					hero,
 				})
 			);
 		} catch (error) {

@@ -12,6 +12,7 @@ import userRouter from './routes/userRouter.js';
 import activityRouter from './routes/activityRouter.js';
 import menuListRouter from './routes/menuListRouter.js';
 import analyticsRouter from './routes/analyticsRouter.js';
+import heroRouter from './routes/heroRouter.js';
 // Config import
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -59,6 +60,7 @@ app.use('/api/users', userRouter);
 app.use('/api/activity', activityRouter);
 app.use('/api/menu-lists', menuListRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/hero', heroRouter);
 
 // Health check for the admin's status view
 app.get('/api/health', (req, res) => {

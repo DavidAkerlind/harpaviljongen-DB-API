@@ -52,6 +52,7 @@ CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 CLOUDINARY_FOLDER=menu-pdfs-dev  # keeps test uploads out of the production folder
 CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev  # same for profile pictures
+CLOUDINARY_HERO_FOLDER=hero-images-dev      # same for the home page's photos
 ```
 
 Generate a random secret with:

@@ -39,6 +39,8 @@ export const ACTIVITY_CATEGORIES = {
 	menus: '(pdf|menu)',
 	openingHours: 'openingHours',
 	pages: 'pages',
+	// The home page's photos (Startbild)
+	hero: 'hero',
 	users: 'user',
 	account: 'account',
 	log: 'activity',

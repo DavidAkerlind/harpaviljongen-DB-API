@@ -18,6 +18,11 @@ const MAX_PDF_MB = 10;
 const AVATAR_FOLDER = process.env.CLOUDINARY_AVATAR_FOLDER || 'admin-avatars';
 const MAX_IMAGE_MB = 5;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+// The home page's hero photos. Use hero-images-dev locally. 10 MB is the most Cloudinary's
+// free plan takes; the admin shrinks larger photos to 3840 px before uploading.
+const HERO_FOLDER = process.env.CLOUDINARY_HERO_FOLDER || 'hero-images';
+const MAX_HERO_MB = 10;
+const MAX_HERO_SIDE = 3840;
 
 const storage = multer.memoryStorage();
 
@@ -55,38 +60,45 @@ const uploadPdfMiddleware = (req, res, next) => {
 	});
 };
 
-const multerImage = multer({
-	storage,
-	limits: { fileSize: MAX_IMAGE_MB * 1024 * 1024 },
-	fileFilter: (req, file, cb) => {
-		if (IMAGE_TYPES.includes(file.mimetype)) {
-			cb(null, true);
-		} else {
-			cb(
-				Object.assign(new Error('Only JPG, PNG or WebP images are allowed'), {
-					status: 400,
-				}),
-				false
-			);
-		}
-	},
-}).single('file');
+const imageMulter = (maxMb) =>
+	multer({
+		storage,
+		limits: { fileSize: maxMb * 1024 * 1024 },
+		fileFilter: (req, file, cb) => {
+			if (IMAGE_TYPES.includes(file.mimetype)) {
+				cb(null, true);
+			} else {
+				cb(
+					Object.assign(new Error('Only JPG, PNG or WebP images are allowed'), {
+						status: 400,
+					}),
+					false
+				);
+			}
+		},
+	}).single('file');
 
-const uploadImageMiddleware = (req, res, next) => {
-	multerImage(req, res, (error) => {
-		if (!error) return next();
-		if (error.code === 'LIMIT_FILE_SIZE') {
-			return next({
-				status: 413,
-				message: `The image is too large (max ${MAX_IMAGE_MB} MB)`,
-			});
-		}
-		if (error instanceof multer.MulterError) {
-			return next({ status: 400, message: error.message });
-		}
-		next(error);
-	});
+const imageMiddleware = (maxMb) => {
+	const multerImage = imageMulter(maxMb);
+	return (req, res, next) => {
+		multerImage(req, res, (error) => {
+			if (!error) return next();
+			if (error.code === 'LIMIT_FILE_SIZE') {
+				return next({
+					status: 413,
+					message: `The image is too large (max ${maxMb} MB)`,
+				});
+			}
+			if (error instanceof multer.MulterError) {
+				return next({ status: 400, message: error.message });
+			}
+			next(error);
+		});
+	};
 };
+
+const uploadImageMiddleware = imageMiddleware(MAX_IMAGE_MB);
+const uploadHeroImageMiddleware = imageMiddleware(MAX_HERO_MB);
 
 // Same idea for images: JPG, PNG or WebP by their first bytes
 const isImageBuffer = (buffer) => {
@@ -112,6 +124,28 @@ const uploadAvatarToCloudinary = (buffer, filename) => {
 				format: 'jpg',
 				transformation: [
 					{ width: 512, height: 512, crop: 'fill', gravity: 'face' },
+				],
+			},
+			(error, result) => {
+				if (error) reject(error);
+				else resolve(result);
+			}
+		);
+		stream.end(buffer);
+	});
+};
+
+// Stored as uploaded, at most 3840 px on the longest side. The website asks Cloudinary for
+// the width and format each screen needs (see heroService.js).
+const uploadHeroToCloudinary = (buffer, filename) => {
+	return new Promise((resolve, reject) => {
+		const stream = cloudinary.uploader.upload_stream(
+			{
+				resource_type: 'image',
+				folder: HERO_FOLDER,
+				public_id: filename,
+				transformation: [
+					{ width: MAX_HERO_SIDE, height: MAX_HERO_SIDE, crop: 'limit' },
 				],
 			},
 			(error, result) => {
@@ -168,4 +202,6 @@ export {
 	uploadImageMiddleware,
 	uploadAvatarToCloudinary,
 	isImageBuffer,
+	uploadHeroImageMiddleware,
+	uploadHeroToCloudinary,
 };
