@@ -450,11 +450,29 @@ DELETE /api/menu-pdfs/{id}                (token) Also deletes the file in Cloud
 ```http
 GET /api/site-settings                    Which pages show in the navbar / on the homepage
 PUT /api/site-settings                    (token) { "pages": { "chambre": { "navbar": true, "home": false } } }
-GET /api/site-config                      What the website reads: page switches, menuLists (buttons with the active PDF's url) and menus (active PDF per type, for older versions of the website)
+GET /api/site-config                      What the website reads: page switches, menuLists (buttons with the active PDF's url), menus (active PDF per type, for older versions of the website) and hero (the home page's photos)
 GET /api/health                           API and database status
 ```
 
 Pages: `chambre`, `events`, `gallery`. Placements: `navbar`, `home`. Only the values you send change.
+
+### Home page photos (Startbild in the admin)
+
+```http
+GET    /api/hero                          { settings: { slideshow, intervalSeconds, shuffle }, images: [...in order] }
+POST   /api/hero/images                   (token) multipart: file (JPG, PNG or WebP, max 10 MB). Added last and shown
+PATCH  /api/hero/images/{id}              (token) { "shown"?: false, "focus"?: { "x": 40, "y": 65 } }
+DELETE /api/hero/images/{id}              (token) Also deletes the file in Cloudinary
+PUT    /api/hero/order                    (token) { "ids": [every photo's id, in the new order] }
+PUT    /api/hero/settings                 (token) { "slideshow"?: true, "intervalSeconds"?: 5–30, "shuffle"?: false }
+```
+
+- The photos are stored in Cloudinary (`CLOUDINARY_HERO_FOLDER`, default `hero-images`), at most 3840 px on the longest side. The admin shrinks larger photos before uploading. At most 30 photos.
+- The website shows the photos with `shown: true` in `order`. The first of them is always shown first, also when `shuffle` is on (the rest are shuffled). With `slideshow: false` only the first is shown.
+- `focus` is the photo's most important point in % from the top left, used as CSS `object-position`, so it stays in view when the screen cuts the photo.
+- **Quality score** (`quality: { score, desktop, phone, rating }`), worked out once at upload from the photo's size (`utils/heroQuality.js`). The photo fills the screen, so a computer (16:9) shows its full width and a phone held upright (9:19.5) its full height. `desktop` scores the visible width (10 at 2560 px), `phone` the visible height (10 at 1600 px), and `score` is the weaker of the two. `rating`: `good` 8–10, `ok` 5–7, `poor` 1–4.
+- `GET /api/site-config` has `hero: { slideshow, intervalSeconds, shuffle, slides: [{ key, src, srcSet, position }] }` with only the shown photos, and Cloudinary addresses that give each screen the right width (720–2560 px) and format (`f_auto`: WebP/AVIF). `slides` is empty when no photo is shown; the website then shows its built-in photos.
+- Everything is logged in the change log (category `hero`).
 
 ### Change log (Senaste ändringar / Alla ändringar)
 
@@ -467,10 +485,10 @@ DELETE /api/activity?olderThan=30d|3m|6m|1y|all                  (admin) delete 
 
 - Newest first, max 100 per page. `before` = id of the last entry you have, for the next page.
 - `from` / `to`: ISO dates (`to` is exclusive). The admin sends midnight in the browser's time zone.
-- `category`: `menus` (PDFs and the menus themselves), `openingHours`, `pages`, `users`, `account`, `log`. `userId`: changes by one person.
+- `category`: `menus` (PDFs and the menus themselves), `openingHours`, `pages`, `hero` (Startbild), `users`, `account`, `log`. `userId`: changes by one person.
 - `total` counts everything matching the filters. Each entry has `user: { name, avatarUrl, deleted }` with the person's current name and picture.
 
-Written automatically after each change made through the admin: menus created/changed/deleted, PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), users created/role/new password/deleted, and your own username, name, picture and password.
+Written automatically after each change made through the admin: menus created/changed/deleted, PDF upload/show/stop/rename/delete, opening hours (only the days that changed), page switches (only the ones that changed), home page photos (upload, show/hide, focus, order, delete, slideshow settings), users created/role/new password/deleted, and your own username, name, picture and password.
 
 **Kept for 1 year.** MongoDB deletes entries automatically when they are 365 days old (a TTL index on `createdAt`, checked about once a minute; the API sets it up on startup). Admins can delete older entries sooner with `DELETE /api/activity?olderThan=…`: everything older than 30 days (`30d`), 3 months (`3m`), 6 months (`6m`), 1 year (`1y`), or everything (`all`). The response says how many were deleted, and the clearing itself is logged (`activity.clear`, category `log`) so you can see who did it.
 
@@ -479,13 +497,15 @@ Written automatically after each change made through the admin: menus created/ch
 ```http
 POST /api/site-config/seen                (public) { "p": "/events", "r": "https://www.google.com/" } – sent by the website, always 204
 POST /api/analytics/hit                   (public) the same; the website doesn't use it since ad blockers block /analytics/
-GET  /api/analytics?range=7d|30d|90d      (token, any role) our own numbers and Cloudflare's side by side
+GET  /api/analytics?range=7d|30d|90d      (token, any role) our own numbers and Cloudflare's added together
 PUT  /api/auth/dashboard                  (token) { "widgets": [{ "id": "visitors", "size": "medium" }] } your own Översikt layout, null = standard
 ```
 
 The website counts every page view itself: only the path and the page the visitor came from are sent. No cookies, no IP addresses and nothing that identifies a visitor is stored, only counters per day (Stockholm time): page views and visits in total, per page, per referrer and per device type (`sitestats`, deleted after 400 days). A **visit** is a page view that didn't come from another page on the site, the same definition as Cloudflare's. Bots are not counted, one IP address can count at most 100 page views per 10 minutes, and at most 60 different pages and 100 referrers are kept per day (the rest count as `(other)`), so made-up hits can't fill the database.
 
-`GET /api/analytics` returns `series` (per day: `own` and `cloudflare` `{ views, visits }`), `totals` (with `ownPrevious` for the period before), `breakdown` (`pages`, `referrers`, `devices`, `countries`: `[{ key, own, cloudflare }]`) and `sources` (`own.since`, `cloudflare.status`: `ok`, `off` or `error`, and `cloudflare.since`). Cloudflare is optional, see *Environment Variables*; `cloudflare` is `null` when it isn't connected, and on days Cloudflare no longer has. A source that doesn't count something is `null` on every row: `referrers` are only our own (Cloudflare's free plan doesn't tell), `countries` only Cloudflare's (codes like `SE`).
+`GET /api/analytics` returns `combined`, which is what the admin shows: our own numbers and Cloudflare's **added together**, per day and in total, never apart. `combined.series` (per day `{ date, views, visits }`, `null` on days neither counted), `combined.totals`, `combined.previous` (the period before, `null` unless both sources counted all of it, so a source that started in the middle doesn't look like growth), `combined.breakdown` (`pages`, `referrers`, `devices`, `countries`: `[{ key, value }]`) and `combined.since` (the first day anything was counted). Referrers only come from our own counting, countries only from Cloudflare.
+
+It also returns the two separately, for older versions of the admin: `series` (per day: `own` and `cloudflare` `{ views, visits }`), `totals` (with `ownPrevious` for the period before), `breakdown` (`pages`, `referrers`, `devices`, `countries`: `[{ key, own, cloudflare }]`) and `sources` (`own.since`, `cloudflare.status`: `ok`, `off` or `error`, and `cloudflare.since`). Cloudflare is optional, see *Environment Variables*; `cloudflare` is `null` when it isn't connected, and on days Cloudflare no longer has. A source that doesn't count something is `null` on every row: `referrers` are only our own (Cloudflare's free plan doesn't tell), `countries` only Cloudflare's (codes like `SE`).
 
 Cloudflare's numbers come from its traffic data for the website (`services/cloudflareAnalytics.js`): page loads of the website's pages on `harpaviljongen.com` and `www.`, answered 200 or 304, without bots (by user agent) and without data centres such as Google Cloud, Azure and AWS (by network), where scanners come from. Cloudflare only sees pages being loaded, not clicks between pages in the browser, so its page views are fewer than ours. Finished days (Stockholm time) are saved as counters in `cloudflaredays` (deleted after 400 days), so they stay after Cloudflare stops keeping them. When the website gets a new page, add it to `PAGES` in that file.
 
@@ -546,14 +566,15 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_FOLDER=menu-pdfs
 CLOUDINARY_AVATAR_FOLDER=admin-avatars
-# Optional: Cloudflare's traffic numbers next to our own (see docs/GO_LIVE.md)
+CLOUDINARY_HERO_FOLDER=hero-images
+# Optional: Cloudflare's traffic numbers added to our own (see docs/GO_LIVE.md)
 CLOUDFLARE_API_TOKEN=
 CLOUDFLARE_ACCOUNT_ID=
 # CLOUDFLARE_SITE_HOSTS=harpaviljongen.com,www.harpaviljongen.com   (default)
 # CLOUDFLARE_ZONE_ID=                            (read the zone instead of the whole account)
 ```
 
-Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`, `CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).
+Use a separate database (and `CLOUDINARY_FOLDER=menu-pdfs-dev`, `CLOUDINARY_AVATAR_FOLDER=admin-avatars-dev`, `CLOUDINARY_HERO_FOLDER=hero-images-dev`) locally, see [docs/LOCAL_TESTING.md](docs/LOCAL_TESTING.md).
 
 ### Installation
 

@@ -114,6 +114,26 @@ function merge(own, cloudflare, limit = TOP) {
 		.slice(0, limit);
 }
 
+const addInto = (sum, map) => {
+	for (const [key, n] of map ?? []) sum.set(key, (sum.get(key) ?? 0) + n);
+	return sum;
+};
+
+// Our own counting and Cloudflare's added together, the biggest first: [{ key, value }]
+function combine(maps, limit = TOP) {
+	const sum = maps.reduce(addInto, new Map());
+	return [...sum]
+		.map(([key, value]) => ({ key, value }))
+		.sort((a, b) => b.value - a.value)
+		.slice(0, limit);
+}
+
+const sumDays = (days) =>
+	days.reduce(
+		(total, day) => ({ views: total.views + day.views, visits: total.visits + day.visits }),
+		{ views: 0, visits: 0 }
+	);
+
 // Everything the Statistik page and the dashboard widgets show for a period
 export async function getAnalytics(rangeKey, now = new Date()) {
 	const length = ANALYTICS_RANGES[rangeKey];
@@ -122,14 +142,16 @@ export async function getAnalytics(rangeKey, now = new Date()) {
 	const previousTo = addDays(from, -1);
 	const previousFrom = addDays(previousTo, -(length - 1));
 
-	const [dayRows, totals, previous, breakdown, first, cloudflare] = await Promise.all([
-		SiteStat.find({ kind: 'total', day: { $gte: from, $lte: to } }),
-		ownTotals(from, to),
-		ownTotals(previousFrom, previousTo),
-		ownBreakdown(from, to),
-		SiteStat.findOne({ kind: 'total' }).sort({ day: 1 }),
-		getCloudflareStats(from, to),
-	]);
+	const [dayRows, totals, previous, breakdown, first, cloudflare, cloudflarePrevious] =
+		await Promise.all([
+			SiteStat.find({ kind: 'total', day: { $gte: from, $lte: to } }),
+			ownTotals(from, to),
+			ownTotals(previousFrom, previousTo),
+			ownBreakdown(from, to),
+			SiteStat.findOne({ kind: 'total' }).sort({ day: 1 }),
+			getCloudflareStats(from, to),
+			getCloudflareStats(previousFrom, previousTo),
+		]);
 
 	const ownByDay = new Map(dayRows.map((row) => [row.day, row]));
 	const cf = cloudflare.status === 'ok' ? cloudflare : null;
@@ -141,6 +163,39 @@ export async function getAnalytics(rangeKey, now = new Date()) {
 			cfTotals.visits += day.visits;
 		}
 	}
+
+	// Combined: our own counting plus Cloudflare's, per day. A day neither of them has
+	// numbers for (before counting started) is null, not 0.
+	const ownSince = first?.day ?? null;
+	const combinedDay = (date, ownDay, cfDay) => {
+		const own = ownSince && date >= ownSince ? ownDay : null;
+		if (!own && !cfDay) return { date, views: null, visits: null };
+		return {
+			date,
+			views: (own?.views ?? 0) + (cfDay?.views ?? 0),
+			visits: (own?.visits ?? 0) + (cfDay?.visits ?? 0),
+		};
+	};
+	const combinedSeries = daysBetween(from, to).map((date) =>
+		combinedDay(
+			date,
+			{ views: ownByDay.get(date)?.views ?? 0, visits: ownByDay.get(date)?.visits ?? 0 },
+			cf?.days.get(date) ?? null
+		)
+	);
+	const measured = combinedSeries.filter((day) => day.views !== null);
+	// Compared with the period before only when every source counted all of it; otherwise a
+	// source that started in the middle would look like growth
+	const cfPrevious = cloudflarePrevious.status === 'ok' ? cloudflarePrevious : null;
+	const covered =
+		Boolean(ownSince) &&
+		ownSince <= previousFrom &&
+		(!cf || (cfPrevious && cfPrevious.since <= previousFrom));
+	let combinedPrevious = null;
+	if (covered) {
+		combinedPrevious = sumDays([previous, ...(cf ? cfPrevious.days.values() : [])]);
+	}
+	const sinceDays = [ownSince, cf?.since].filter(Boolean).sort();
 
 	return {
 		range: { key: rangeKey, from, to, days: length },
@@ -161,8 +216,23 @@ export async function getAnalytics(rangeKey, now = new Date()) {
 			devices: merge(breakdown.device, cf?.devices, 5),
 			countries: cf ? merge(null, cf.countries) : [],
 		},
+		// What the admin shows: our own counting and Cloudflare's added together, never apart.
+		// (series/totals/breakdown above have them separately, for older versions of the admin.)
+		combined: {
+			series: combinedSeries,
+			totals: sumDays(measured),
+			// null when the period before can't be compared (see covered)
+			previous: combinedPrevious,
+			breakdown: {
+				pages: combine([breakdown.page, cf?.pages]),
+				referrers: combine([breakdown.referrer]),
+				devices: combine([breakdown.device, cf?.devices], 5),
+				countries: cf ? combine([cf.countries]) : [],
+			},
+			since: sinceDays[0] ?? null,
+		},
 		sources: {
-			own: { since: first?.day ?? null },
+			own: { since: ownSince },
 			cloudflare:
 				cloudflare.status === 'error'
 					? { status: 'error', message: cloudflare.message }

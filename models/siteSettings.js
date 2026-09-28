@@ -23,6 +23,24 @@ const pagesDefinition = Object.fromEntries(
 	])
 );
 
+// The home page's hero: slideshow on/off, seconds per photo, own order or shuffled.
+// Which photos and in what order is in the heroimages collection (models/heroImage.js).
+export const HERO_INTERVAL = { min: 5, max: 30, default: 10 };
+
+const HeroSettingsSchema = new Schema(
+	{
+		slideshow: { type: Boolean, default: true },
+		intervalSeconds: {
+			type: Number,
+			default: HERO_INTERVAL.default,
+			min: HERO_INTERVAL.min,
+			max: HERO_INTERVAL.max,
+		},
+		shuffle: { type: Boolean, default: false },
+	},
+	{ _id: false }
+);
+
 // Ett enda dokument (key: 'main') med inställningar för hemsidan
 const SiteSettingsSchema = new Schema(
 	{
@@ -31,6 +49,7 @@ const SiteSettingsSchema = new Schema(
 			type: new Schema(pagesDefinition, { _id: false }),
 			default: () => ({}),
 		},
+		hero: { type: HeroSettingsSchema, default: () => ({}) },
 	},
 	{ timestamps: true, collection: 'sitesettings' }
 );

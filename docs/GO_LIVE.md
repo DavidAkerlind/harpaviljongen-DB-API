@@ -110,6 +110,23 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 
 ---
 
+## Update: home page photos from the admin, and one number on Statistik (branch `claude/serene-fermat-05id5w`)
+
+- **Startbild** (new in the sidebar; on a phone under **Mer**): upload the photos at the top of the home page, choose which are shown and in what order (drag), which is shown first, the time per photo (5–30 s), shuffled order, or turn the slideshow off so only the first photo is shown. Each photo gets a quality score from 1 to 10 at upload (green *Bra*, yellow *Okej*, red *Dålig*). Clicking a photo sets the point that stays in view on phones and shows how it looks on a computer and a phone. Everyone who can log in can use it.
+- **Statistik** and the *Besökare* widget show one number and one line: our own counting and Cloudflare's added together.
+
+Deploy in this order, and wait for each to be live before the next:
+
+1. **API:** merge the branch into `main` in **harpaviljongen-DB-API**. Nothing to add on Render: the photos go to the Cloudinary folder `hero-images` (set `CLOUDINARY_HERO_FOLDER` only if you want another name). Check that `https://harpaviljongen-db-api.onrender.com/api/hero` answers.
+2. **Admin:** merge into `main` in **harpaviljongen-admin-service**.
+3. **Website:** merge into `main` in **harpaviljongen**.
+
+Until photos are uploaded and shown in **Startbild**, the website keeps showing its built-in photos (with the settings from **Startbild**). As soon as one photo is shown, the website shows only the uploaded ones, so upload all the photos you want in the slideshow, including the hare photo if it should stay. Photos straight from a phone or camera are best: the admin makes them the right size.
+
+Cloudinary: the website asks Cloudinary for each photo in the width and format each screen needs. This only works if **Settings → Security → Strict transformations** is *off* in Cloudinary (it is by default).
+
+---
+
 ## Update: Cloudflare numbers from its traffic data (branch `claude/serene-fermat-05id5w`)
 
 The blue *Cloudflare* line on **Statistik** used to come from Cloudflare Web Analytics, which only counts browsers that run its script (not EU visitors with the EU option, not ad blockers). It now comes from Cloudflare's traffic data, the same data as the *Traffic overview* in Cloudflare, cleaned down to visits:
