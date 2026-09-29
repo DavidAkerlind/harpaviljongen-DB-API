@@ -2,6 +2,7 @@ import SiteSettingsService from '../services/siteSettingsService.js';
 import MenuPdf from '../models/MenuPdf.js';
 import { listMenuLists } from '../services/menuListService.js';
 import { heroForSite } from '../services/heroService.js';
+import { newsletterConnected } from '../services/newsletterService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 
 export class SiteConfigController {
@@ -45,6 +46,9 @@ export class SiteConfigController {
 					// slides is empty when none is uploaded and shown; the website then
 					// shows its built-in photos.
 					hero,
+					// Whether the newsletter signup works (GETANEWSLETTER_FORM_LINK is set);
+					// the website hides its signup field when false
+					newsletter: newsletterConnected(),
 				})
 			);
 		} catch (error) {
