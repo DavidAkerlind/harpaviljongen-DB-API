@@ -112,7 +112,7 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 
 ## Update: newsletter signup on the home page (branch `claude/serene-fermat-05id5w`)
 
-The home page gets an email field with a **PRENUMERERA** button: last in the footer on a computer, above the map on a phone. The address goes via the API to a subscription form in the restaurant's Get a Newsletter account.
+The home page gets an email field with a **PRENUMERERA** button: last in the footer on a computer, above the map on a phone. The address goes via the API to a subscription form in the restaurant's Get a Newsletter account. The website also loads the restaurant's Get a Newsletter **popup** on every page; how it looks, when it shows and how often is set in their account under the popup form's settings. The hamburger menu gets **Få vårat nyhetsbrev →** above the address, which for now leads to the email field.
 
 1. **Get a Newsletter:** log in, go to **Formulär** (Forms) and create a subscription form (not a popup) connected to the right list. Set its confirmation email if you want one. Copy the form's link; it looks like `https://gansub.com/s/AbC123/`.
 2. **Render:** in the API's **Environment**, add `GETANEWSLETTER_FORM_LINK` = that link and save.
