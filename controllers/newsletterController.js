@@ -1,4 +1,10 @@
-import { isEmail, subscribeToNewsletter } from '../services/newsletterService.js';
+import {
+	getNewsletterStats,
+	isEmail,
+	recordSignup,
+	subscribeToNewsletter,
+} from '../services/newsletterService.js';
+import { ANALYTICS_RANGES } from '../services/analyticsService.js';
 import { constructResObj } from '../utils/constructResObj.js';
 
 export class NewsletterController {
@@ -15,9 +21,31 @@ export class NewsletterController {
 		try {
 			await subscribeToNewsletter(email);
 			res.status(201).json(constructResObj(201, 'Subscribed', true));
+			// Counted for the admin's statistics; the signup has gone through either way
+			recordSignup().catch((error) =>
+				console.error('[newsletter] Could not count a signup:', error.message)
+			);
 		} catch (error) {
 			const status = error.status ?? 500;
 			res.status(status).json(constructResObj(status, error.message, false));
 		}
+	}
+
+	// GET /api/newsletter/stats?range=7d|30d|90d – for the admin's Statistik page
+	static async stats(req, res) {
+		const range = req.query.range ?? '30d';
+		if (!ANALYTICS_RANGES[range]) {
+			return res
+				.status(400)
+				.json(
+					constructResObj(
+						400,
+						`range must be one of: ${Object.keys(ANALYTICS_RANGES).join(', ')}`,
+						false
+					)
+				);
+		}
+		const data = await getNewsletterStats(range);
+		res.json(constructResObj(200, 'Newsletter statistics retrieved successfully', true, data));
 	}
 }

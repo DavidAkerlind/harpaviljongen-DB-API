@@ -123,6 +123,19 @@ Without the link (or before the API is updated with it) the website hides the fi
 
 ---
 
+## Update: newsletter numbers on Statistik, and a new phone dock in the admin (branch `claude/serene-fermat-05id5w`)
+
+Statistik in the admin gets a **Nyhetsbrev** part: how many subscribe, new and cancelled subscriptions per day, how many signed up through the website's field, and the latest newsletters sent. The field's signups are counted by the API itself; the rest comes from Get a Newsletter's API.
+
+1. **Get a Newsletter:** log in, go to **My Account → API** (Mitt konto → API) and create an API key. Copy it.
+2. **Render:** in the API's **Environment**, add `GETANEWSLETTER_API_TOKEN` = that key and save.
+3. **API:** merge the branch into `main` in **harpaviljongen-DB-API**.
+4. **Admin:** merge into `main` in **harpaviljongen-admin-service**, then open Statistik and check that the number of subscribers matches Get a Newsletter.
+
+Without the key, Statistik shows only the signups through the website's field, and admins see a note about the key. If Get a Newsletter answers with an error, the page says what it was.
+
+---
+
 ## Update: home page photos from the admin, and one number on Statistik (branch `claude/serene-fermat-05id5w`)
 
 - **Startbild** (new in the sidebar; on a phone under **Mer**): upload the photos at the top of the home page, choose which are shown and in what order (drag), which is shown first, the time per photo (5–30 s), shuffled order, or turn the slideshow off so only the first photo is shown. Each photo gets a quality score from 1 to 10 at upload (green *Bra*, yellow *Okej*, red *Dålig*). Clicking a photo sets the point that stays in view on phones and shows how it looks on a computer and a phone. Everyone who can log in can use it.
