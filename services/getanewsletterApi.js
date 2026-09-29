@@ -120,8 +120,33 @@ async function loadNewsletters() {
 		}));
 }
 
+// Every account has Get a Newsletter's "Test list" (for sending a newsletter to yourself
+// before it goes out), which isn't subscribers, so it isn't counted. GETANEWSLETTER_LISTS
+// (list hashes, comma separated) picks the lists to count instead.
+const isTestList = (list) =>
+	/^test ?lista?$/i.test(list.name?.trim() ?? '') ||
+	/newsletter tests|testutskick/i.test(list.description ?? '');
+
+function chooseLists(all) {
+	const wanted = (process.env.GETANEWSLETTER_LISTS || '')
+		.split(',')
+		.map((hash) => hash.trim())
+		.filter(Boolean);
+	let counted;
+	if (wanted.length) {
+		counted = all.filter((list) => wanted.includes(list.hash));
+		if (!counted.length) throw new Error('No list in Get a Newsletter matches GETANEWSLETTER_LISTS');
+	} else {
+		const real = all.filter((list) => !isTestList(list));
+		counted = real.length ? real : all;
+	}
+	return { counted, skipped: all.filter((list) => !counted.includes(list)) };
+}
+
 async function load() {
-	const lists = (await getAll(`lists/?paginate_by=${PAGE_SIZE}`, 5)).map((list) => ({
+	const all = await getAll(`lists/?paginate_by=${PAGE_SIZE}`, 5);
+	const { counted, skipped } = chooseLists(all);
+	const lists = counted.map((list) => ({
 		name: list.name || list.hash,
 		hash: list.hash,
 		subscribers: toNumber(list.active_subscribers_count),
@@ -138,12 +163,17 @@ async function load() {
 			return null;
 		}),
 	]);
-	return { lists, subscriptions, newsletters };
+	return {
+		lists,
+		skippedLists: skipped.map((list) => list.name || list.hash),
+		subscriptions,
+		newsletters,
+	};
 }
 
 let cache = null;
 
-// { status: 'ok', lists, subscriptions, newsletters }, { status: 'off' } or
+// { status: 'ok', lists, skippedLists, subscriptions, newsletters }, { status: 'off' } or
 // { status: 'error', message }. subscriptions is null when a list is too big to count per
 // day, newsletters null when they couldn't be read.
 export async function getGetanewsletterData({ fresh = false } = {}) {

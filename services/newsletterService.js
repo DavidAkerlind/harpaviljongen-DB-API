@@ -104,6 +104,8 @@ export async function getNewsletterStats(rangeKey, now = new Date()) {
 				? gan.lists.reduce((sum, list) => sum + list.subscribers, 0)
 				: active,
 			lists: gan.lists.map(({ name, subscribers }) => ({ name, subscribers })),
+			// Lists not counted: Get a Newsletter's "Test list" (or those not in GETANEWSLETTER_LISTS)
+			skippedLists: gan.skippedLists,
 			// Subscriptions started and ended in the period and the one before; null when the
 			// lists are too big to go through
 			growth: added && {

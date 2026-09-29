@@ -2408,7 +2408,7 @@ paths:
             summary: The newsletter's numbers for the admin's Statistik page
             description: |
                 `website` and `series[].website`: signups through the website's field, counted here (no addresses are stored).
-                `getanewsletter`: from Get a Newsletter's API when GETANEWSLETTER_API_TOKEN is set (`status: off` otherwise, `error` with a `message` if it failed). `subscribers` = active subscribers on all lists now. `growth` and `series[].added/cancelled` = subscriptions started and ended (every way in, the popup too); null when the lists are too big to go through. `newsletters` = the latest sent, null if they couldn't be read. Get a Newsletter is asked at most every 5 minutes.
+                `getanewsletter`: from Get a Newsletter's API when GETANEWSLETTER_API_TOKEN is set (`status: off` otherwise, `error` with a `message` if it failed). `subscribers` = active subscribers now, on every list except Get a Newsletter's "Test list" (`skippedLists`), or on the lists in GETANEWSLETTER_LISTS. `growth` and `series[].added/cancelled` = subscriptions started and ended (every way in, the popup too); null when the lists are too big to go through. `newsletters` = the latest sent, null if they couldn't be read. Get a Newsletter is asked at most every 5 minutes.
             parameters:
                 - in: query
                   name: range
@@ -2430,7 +2430,8 @@ paths:
                                     getanewsletter:
                                         status: ok
                                         subscribers: 412
-                                        lists: [{ name: Harpaviljongen, subscribers: 412 }]
+                                        lists: [{ name: Standard list, subscribers: 412 }]
+                                        skippedLists: [Test list]
                                         growth: { added: 5, cancelled: 1, previousAdded: 3, previousCancelled: 0 }
                                         newsletters:
                                             - { id: '81', subject: 'Höstmenyn är här', sent: '2026-09-20T08:00:00.000Z', recipients: 398, uniqueOpens: 201, opens: 260, uniqueClicks: 44 }

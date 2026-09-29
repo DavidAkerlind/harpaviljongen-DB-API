@@ -351,7 +351,7 @@ GET  /api/newsletter/stats   ?range=7d|30d|90d                   Logged in. The 
 
 The website's signup field. The address is sent to the subscription form set in `GETANEWSLETTER_FORM_LINK` (Get a Newsletter) and not stored here, only how many signed up per day; `site-config` has `newsletter: true` when the link is set. At most 8 tries per IP address per 15 minutes. See docs/GO_LIVE.md.
 
-`/stats` gives the signups through the website's field per day and, when `GETANEWSLETTER_API_TOKEN` is set, Get a Newsletter's numbers: active subscribers per list, subscriptions started and ended per day (every way in, the popup too) and the latest newsletters sent with opens. Get a Newsletter is asked at most every 5 minutes; no email addresses are kept.
+`/stats` gives the signups through the website's field per day and, when `GETANEWSLETTER_API_TOKEN` is set, Get a Newsletter's numbers: active subscribers per list (every list except Get a Newsletter's own "Test list", or the hashes in `GETANEWSLETTER_LISTS`), subscriptions started and ended per day (every way in, the popup too) and the latest newsletters sent with opens. Get a Newsletter is asked at most every 5 minutes; no email addresses are kept.
 
 ### User Model
 
