@@ -342,6 +342,14 @@ DELETE /api/users/{userId}         (admin) Only employees, not yourself
 - A token carries a version number that goes up on every password change, so old tokens stop working as soon as a password is changed.
 - Users from before roles existed get `admin` when the API starts.
 
+### Newsletter
+
+```http
+POST /api/newsletter   { "email": "anna@example.com" }   Public. 201 = Get a Newsletter added the address
+```
+
+The website's signup field. The address is sent to the subscription form set in `GETANEWSLETTER_FORM_LINK` (Get a Newsletter) and not stored here; `site-config` has `newsletter: true` when the link is set. At most 8 tries per IP address per 15 minutes. See docs/GO_LIVE.md.
+
 ### User Model
 
 ```typescript

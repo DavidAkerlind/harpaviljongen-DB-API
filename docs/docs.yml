@@ -2373,6 +2373,31 @@ paths:
                                               src: 'https://res.cloudinary.com/<cloud>/image/upload/f_auto,q_auto,c_limit,w_2560/v1790578705/hero-images/hero-1790578705111.jpg'
                                               srcSet: '…/w_720/… 720w, …/w_1280/… 1280w, …/w_1920/… 1920w, …/w_2560/… 2560w'
                                               position: '50% 35%'
+                                    newsletter: true
+
+    /newsletter:
+        post:
+            tags:
+                - Site
+            summary: Sign up for the newsletter (the website's signup field)
+            description: |
+                Public. Sends the address to the subscription form in the restaurant's Get a Newsletter account (GETANEWSLETTER_FORM_LINK); nothing is stored here. At most 8 tries per IP address per 15 minutes.
+                `website` is a hidden trap field: if it isn't empty the answer is 201 and nothing is sent.
+            requestBody:
+                content:
+                    application/json:
+                        example: { email: 'anna@example.com' }
+            responses:
+                '201':
+                    description: Get a Newsletter added the address (it sends its confirmation email if the form has one)
+                '400':
+                    description: Not an email address, or Get a Newsletter did not accept it
+                '429':
+                    description: Too many tries from this IP address
+                '502':
+                    description: Get a Newsletter did not answer or failed
+                '503':
+                    description: GETANEWSLETTER_FORM_LINK is not set
 
     /health:
         get:

@@ -110,6 +110,19 @@ Merge `claude/serene-fermat-05id5w` into `main` in **harpaviljongen**. If the Cl
 
 ---
 
+## Update: newsletter signup on the home page (branch `claude/serene-fermat-05id5w`)
+
+The home page gets an email field with a **PRENUMERERA** button: last in the footer on a computer, above the map on a phone. The address goes via the API to a subscription form in the restaurant's Get a Newsletter account. The website also loads the restaurant's Get a Newsletter **popup** on every page; how it looks, when it shows and how often is set in their account under the popup form's settings. The hamburger menu gets **Få vårat nyhetsbrev →** above the address, which for now leads to the email field.
+
+1. **Get a Newsletter:** log in, go to **Formulär** (Forms) and create a subscription form (not a popup) connected to the right list. Set its confirmation email if you want one. Copy the form's link; it looks like `https://gansub.com/s/AbC123/`.
+2. **Render:** in the API's **Environment**, add `GETANEWSLETTER_FORM_LINK` = that link and save.
+3. **API:** merge the branch into `main` in **harpaviljongen-DB-API**. `https://harpaviljongen-db-api.onrender.com/api/site-config` should now include `"newsletter": true`.
+4. **Website:** merge into `main` in **harpaviljongen**, then sign up once with your own address to check it arrives in Get a Newsletter.
+
+Without the link (or before the API is updated with it) the website hides the field, so nobody sees a signup that doesn't work.
+
+---
+
 ## Update: home page photos from the admin, and one number on Statistik (branch `claude/serene-fermat-05id5w`)
 
 - **Startbild** (new in the sidebar; on a phone under **Mer**): upload the photos at the top of the home page, choose which are shown and in what order (drag), which is shown first, the time per photo (5–30 s), shuffled order, or turn the slideshow off so only the first photo is shown. Each photo gets a quality score from 1 to 10 at upload (green *Bra*, yellow *Okej*, red *Dålig*). Clicking a photo sets the point that stays in view on phones and shows how it looks on a computer and a phone. Everyone who can log in can use it.
